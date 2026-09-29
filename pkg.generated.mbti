@@ -1,0 +1,98 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "arachne"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn parse(String) -> Result[Node, RegexError]
+
+// Errors
+
+// Types and methods
+pub(all) enum BuiltinClass {
+  Digit
+  Word
+  Whitespace
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Captures {
+  // private fields
+} derive(Eq, @debug.Debug)
+pub fn Captures::group(Self, Int) -> Match?
+pub fn Captures::len(Self) -> Int
+pub fn Captures::text(Self, Int, String) -> String?
+
+pub(all) enum ClassItem {
+  Single(Char)
+  Range(Char, Char)
+  Builtin(BuiltinClass, Bool)
+  Property(String, Bool)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Match {
+  start : Int
+  end : Int
+} derive(Eq, @debug.Debug)
+pub fn Match::text(Self, String) -> String
+
+pub(all) enum Node {
+  Empty
+  Lit(Char)
+  Class(Array[ClassItem], Bool)
+  Dot
+  Start
+  End
+  WordBoundary
+  NotWordBoundary
+  Concat(Node, Node)
+  Alt(Node, Node)
+  Capture(Int, Node)
+  Star(Node)
+  Plus(Node)
+  Optional(Node)
+  Count(Node, Int, Int)
+} derive(Eq, @debug.Debug)
+pub fn Node::to_pattern(Self) -> String
+
+pub struct Regex {
+  // private fields
+} derive(Eq, @debug.Debug)
+pub fn Regex::captures(Self, String) -> Captures?
+pub fn Regex::compile(String) -> Result[Self, RegexError]
+pub fn Regex::contains(Self, String) -> Bool
+pub fn Regex::find(Self, String) -> Match?
+pub fn Regex::find_all(Self, String) -> Array[Match]
+pub fn Regex::full_match(Self, String) -> Bool
+pub fn Regex::pattern(Self) -> String
+pub fn Regex::replace_all(Self, String, String) -> String
+pub fn Regex::replace_first(Self, String, String) -> String
+pub fn Regex::replace_n(Self, String, String, Int) -> String
+pub fn Regex::split(Self, String) -> Array[String]
+pub fn Regex::splitn(Self, String, Int) -> Array[String]
+
+pub(all) struct RegexError {
+  pos : Int
+  msg : String
+} derive(Eq, @debug.Debug)
+pub fn RegexError::new(Int, String) -> Self
+pub fn RegexError::to_string(Self) -> String
+
+pub(all) struct RegexSet {
+  // private fields
+} derive(Eq, @debug.Debug)
+pub fn RegexSet::compile(Array[String]) -> Result[Self, RegexSetError]
+pub fn RegexSet::is_match(Self, String) -> Bool
+pub fn RegexSet::len(Self) -> Int
+pub fn RegexSet::matching_patterns(Self, String) -> Array[Int]
+
+pub(all) struct RegexSetError {
+  pattern_index : Int
+  error : RegexError
+} derive(Eq, @debug.Debug)
+pub fn RegexSetError::to_string(Self) -> String
+
+// Type aliases
+
+// Traits

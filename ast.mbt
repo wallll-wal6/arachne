@@ -1,6 +1,7 @@
 // Copyright 2026 Arachne Authors
 // Licensed under the Apache License, Version 2.0.
 
+///|
 /// The parsed form of a regular expression.
 ///
 /// The parser lowers a pattern into this tree. Capturing parentheses remain
@@ -12,6 +13,8 @@ pub(all) enum Node {
   Dot
   Start
   End
+  WordBoundary
+  NotWordBoundary
   Concat(Node, Node)
   Alt(Node, Node)
   Capture(Int, Node)
@@ -21,6 +24,7 @@ pub(all) enum Node {
   Count(Node, Int, Int)
 } derive(Debug, Eq)
 
+///|
 /// A character or inclusive range inside a character class.
 pub(all) enum ClassItem {
   Single(Char)
@@ -29,6 +33,7 @@ pub(all) enum ClassItem {
   Property(String, Bool)
 } derive(Debug, Eq)
 
+///|
 /// Common character categories available through shorthand escapes.
 pub(all) enum BuiltinClass {
   Digit
@@ -36,30 +41,33 @@ pub(all) enum BuiltinClass {
   Whitespace
 } derive(Debug, Eq)
 
+///|
 /// Renders a single character into a string.
 fn char_to_string(c : Char) -> String {
   c.to_string()
 }
 
+///|
 /// Reports whether a character has special meaning in the regex grammar and
 /// must be escaped when rendered back into a pattern string.
 fn is_metachar(c : Char) -> Bool {
-    c == '.' ||
-    c == '^' ||
-    c == '$' ||
-    c == '*' ||
-    c == '+' ||
-    c == '?' ||
-    c == '|' ||
-    c == '(' ||
-    c == ')' ||
-    c == '[' ||
-    c == ']' ||
-    c == '{' ||
-    c == '}' ||
-    c == '\\'
+  c == '.' ||
+  c == '^' ||
+  c == '$' ||
+  c == '*' ||
+  c == '+' ||
+  c == '?' ||
+  c == '|' ||
+  c == '(' ||
+  c == ')' ||
+  c == '[' ||
+  c == ']' ||
+  c == '{' ||
+  c == '}' ||
+  c == '\\'
 }
 
+///|
 /// Renders a literal character, escaping it when the grammar would otherwise
 /// read it as an operator.
 fn escaped_literal(c : Char) -> String {
@@ -76,6 +84,7 @@ fn escaped_literal(c : Char) -> String {
   }
 }
 
+///|
 /// Wraps a sub-pattern in parentheses when it is not a single atom, so the
 /// rendered string stays unambiguous.
 fn wrapped(node : Node) -> String {
@@ -92,14 +101,26 @@ fn wrapped(node : Node) -> String {
   }
 }
 
+///|
 fn class_char(c : Char) -> String {
-  if c == '\\' || c == ']' || c == '-' || c == '^' {
+  if c == '\n' {
+    "\\n"
+  } else if c == '\r' {
+    "\\r"
+  } else if c == '\t' {
+    "\\t"
+  } else if c.to_int() == 0x0B {
+    "\\v"
+  } else if c.to_int() == 0x08 {
+    "\\b"
+  } else if c == '\\' || c == ']' || c == '-' || c == '^' {
     "\\" + c.to_string()
   } else {
     c.to_string()
   }
 }
 
+///|
 /// Renders the pattern back into a canonical, unambiguous string.
 /// Useful for debugging and for round-trip tests in the suite.
 pub fn Node::to_pattern(self : Node) -> String {
@@ -108,6 +129,8 @@ pub fn Node::to_pattern(self : Node) -> String {
     Dot => "."
     Start => "^"
     End => "$"
+    WordBoundary => "\\b"
+    NotWordBoundary => "\\B"
     Lit(c) => escaped_literal(c)
     Class(items, negated) => {
       let mut result = if negated { "[^" } else { "[" }
@@ -115,7 +138,7 @@ pub fn Node::to_pattern(self : Node) -> String {
         let part = match item {
           Single(c) => class_char(c)
           Range(a, b) => class_char(a) + "-" + class_char(b)
-          Builtin(kind, negated) => {
+          Builtin(kind, negated) =>
             match (kind, negated) {
               (Digit, false) => "\\d"
               (Digit, true) => "\\D"
@@ -124,10 +147,8 @@ pub fn Node::to_pattern(self : Node) -> String {
               (Whitespace, false) => "\\s"
               (Whitespace, true) => "\\S"
             }
-          }
-          Property(name, negated) => {
+          Property(name, negated) =>
             "\\" + (if negated { "P" } else { "p" }) + "{" + name + "}"
-          }
         }
         result = result + part
       }

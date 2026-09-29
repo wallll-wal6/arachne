@@ -3,29 +3,30 @@
 
 ///|
 /// Thompson NFA instructions. Assertions consume no input.
-pub enum State {
+priv enum State {
   Accept
   Char(Char, Int)
   CharClass(Array[ClassItem], Bool, Int)
   Any(Int)
   Begin(Int)
   Finish(Int)
+  Boundary(Bool, Int)
   Save(Int, Int)
   Split(Int, Int)
 } derive(Debug, Eq)
 
 ///|
-pub struct Nfa {
+priv struct Nfa {
   states : Array[State]
   start : Int
 } derive(Debug, Eq)
 
 ///|
 pub struct Regex {
-  pattern : String
-  node : Node
-  nfa : Nfa
-  group_count : Int
+  priv pattern : String
+  priv node : Node
+  priv nfa : Nfa
+  priv group_count : Int
 } derive(Debug, Eq)
 
 ///|
@@ -39,13 +40,13 @@ pub(all) struct Match {
 /// always the complete match; groups opened by parentheses are numbered from
 /// one in opening-parenthesis order.
 pub(all) struct Captures {
-  groups : Array[Match?]
+  priv groups : Array[Match?]
 } derive(Debug, Eq)
 
 ///|
 /// A compiled collection of patterns for routing, filtering, and rule sets.
 pub(all) struct RegexSet {
-  patterns : Array[Regex]
+  priv patterns : Array[Regex]
 } derive(Debug, Eq)
 
 ///|
@@ -61,13 +62,33 @@ pub fn RegexSetError::to_string(self : RegexSetError) -> String {
 }
 
 ///|
-/// Compiles a set of independent patterns. The first invalid pattern returns
-/// its index and the original parser error.
-pub fn RegexSet::compile(patterns : Array[String]) -> Result[RegexSet, RegexSetError] {
+/// Compiles independent patterns, returning the index and error for the first
+/// pattern that is invalid or exceeds the aggregate set budget.
+pub fn RegexSet::compile(
+  patterns : Array[String],
+) -> Result[RegexSet, RegexSetError] {
+  if patterns.length() > 1024 {
+    return Err({
+      pattern_index: 1024,
+      error: RegexError::new(0, "regex set exceeds 1024 patterns"),
+    })
+  }
   let compiled : Array[Regex] = []
+  let mut total_states = 0
   for i, pattern in patterns {
     match Regex::compile(pattern) {
-      Ok(regex) => compiled.push(regex)
+      Ok(regex) => {
+        if regex.nfa.states.length() > max_nfa_states - total_states {
+          return Err({
+            pattern_index: i,
+            error: RegexError::new(
+              0, "regex set exceeds 65536 aggregate NFA states",
+            ),
+          })
+        }
+        total_states = total_states + regex.nfa.states.length()
+        compiled.push(regex)
+      }
       Err(error) => return Err({ pattern_index: i, error, })
     }
   }
@@ -92,7 +113,10 @@ pub fn RegexSet::is_match(self : RegexSet, text : String) -> Bool {
 
 ///|
 /// Returns matching pattern indexes in their original order.
-pub fn RegexSet::matching_patterns(self : RegexSet, text : String) -> Array[Int] {
+pub fn RegexSet::matching_patterns(
+  self : RegexSet,
+  text : String,
+) -> Array[Int] {
   let matches : Array[Int] = []
   for i, pattern in self.patterns {
     if pattern.contains(text) {
@@ -132,8 +156,66 @@ pub fn Captures::text(self : Captures, index : Int, text : String) -> String? {
 /// Compiles a pattern into a reusable Regex, or returns the first error.
 pub fn Regex::compile(pattern : String) -> Result[Regex, RegexError] {
   match parse(pattern) {
-    Ok(node) => Ok({ pattern, node, nfa: compile_nfa(node), group_count: capture_count(node), })
+    Ok(node) =>
+      if estimate_nfa_states(node) >= max_nfa_states {
+        Err(RegexError::new(0, "compiled expression exceeds 65536 NFA states"))
+      } else {
+        Ok({
+          pattern,
+          node,
+          nfa: compile_nfa(node),
+          group_count: capture_count(node),
+        })
+      }
     Err(e) => Err(e)
+  }
+}
+
+///|
+let max_nfa_states = 65536
+
+///|
+fn capped_add(a : Int, b : Int) -> Int {
+  if a > max_nfa_states || b > max_nfa_states || a > max_nfa_states - b {
+    max_nfa_states + 1
+  } else {
+    a + b
+  }
+}
+
+///|
+fn capped_mul(a : Int, b : Int) -> Int {
+  if a == 0 || b == 0 {
+    0
+  } else if a > max_nfa_states || b > max_nfa_states || a > max_nfa_states / b {
+    max_nfa_states + 1
+  } else {
+    a * b
+  }
+}
+
+///|
+/// Estimate the Thompson instruction count without expanding repetitions.
+fn estimate_nfa_states(node : Node) -> Int {
+  match node {
+    Empty | Start | End | WordBoundary | NotWordBoundary => 1
+    Lit(_) | Class(_, _) | Dot => 1
+    Concat(a, b) => capped_add(estimate_nfa_states(a), estimate_nfa_states(b))
+    Alt(a, b) =>
+      capped_add(capped_add(estimate_nfa_states(a), estimate_nfa_states(b)), 1)
+    Capture(_, inner) => capped_add(estimate_nfa_states(inner), 2)
+    Star(inner) | Plus(inner) | Optional(inner) =>
+      capped_add(estimate_nfa_states(inner), 1)
+    Count(inner, min, max) => {
+      let body = estimate_nfa_states(inner)
+      if max < 0 {
+        capped_add(capped_mul(body, min), capped_add(body, 1))
+      } else {
+        let required = capped_mul(body, min)
+        let optional = capped_mul(capped_add(body, 1), max - min)
+        capped_add(required, optional)
+      }
+    }
   }
 }
 
@@ -156,8 +238,7 @@ pub fn Regex::full_match(self : Regex, text : String) -> Bool {
 /// Finds the leftmost, longest match anywhere in text.
 pub fn Regex::find(self : Regex, text : String) -> Match? {
   let chars = text.to_array()
-  let cache : Array[DfaEdge] = []
-  match find_from(self.nfa, chars, 0, cache) {
+  match find_from(self.nfa, chars, 0) {
     Some(found) => Some(to_unit_match(found, chars))
     None => None
   }
@@ -168,12 +249,11 @@ pub fn Regex::find(self : Regex, text : String) -> Match? {
 /// one input character, so patterns such as the empty expression terminate.
 pub fn Regex::find_all(self : Regex, text : String) -> Array[Match] {
   let chars = text.to_array()
-  let cache : Array[DfaEdge] = []
   let matches : Array[Match] = []
   let mut from = 0
   let mut done = false
   while !done {
-    match find_from(self.nfa, chars, from, cache) {
+    match find_from(self.nfa, chars, from) {
       Some(found) => {
         matches.push(to_unit_match(found, chars))
         if found.end > found.start {
@@ -201,14 +281,22 @@ pub fn Match::text(self : Match, text : String) -> String {
 /// Replaces the first match. `$0` inserts the entire match, `$1` inserts the
 /// first capture, and `$$` inserts a literal dollar sign. An unmatched capture
 /// expands to the empty string.
-pub fn Regex::replace_first(self : Regex, text : String, replacement : String) -> String {
+pub fn Regex::replace_first(
+  self : Regex,
+  text : String,
+  replacement : String,
+) -> String {
   self.replace_n(text, replacement, 1)
 }
 
 ///|
 /// Replaces every non-overlapping match. Empty matches advance by one
 /// character and include the final input boundary once.
-pub fn Regex::replace_all(self : Regex, text : String, replacement : String) -> String {
+pub fn Regex::replace_all(
+  self : Regex,
+  text : String,
+  replacement : String,
+) -> String {
   self.replace_n(text, replacement, -1)
 }
 
@@ -226,7 +314,6 @@ pub fn Regex::replace_n(
   }
   let builder = StringBuilder()
   let chars = text.to_array()
-  let cache : Array[DfaEdge] = []
   let mut from = 0
   let mut copied_until = 0
   let mut count = 0
@@ -234,12 +321,13 @@ pub fn Regex::replace_n(
     if limit > 0 && count == limit {
       break
     }
-    match find_from(self.nfa, chars, from, cache) {
+    match find_from(self.nfa, chars, from) {
       Some(found) => {
         write_char_range(builder, chars, copied_until, found.start)
-        let captures = match captures_at(self.nfa, chars, found.start, self.group_count) {
+        let captures = match
+          captures_at(self.nfa, chars, found.start, self.group_count) {
           Some(captures) => captures
-          None => { groups: [Some(to_unit_match(found, chars)),], }
+          None => { groups: [Some(to_unit_match(found, chars))], }
         }
         write_replacement(builder, text, replacement, captures)
         copied_until = found.end
@@ -274,13 +362,12 @@ pub fn Regex::splitn(self : Regex, text : String, limit : Int) -> Array[String] 
   if limit == 0 {
     return pieces
   }
-  let cache : Array[DfaEdge] = []
   let chars = text.to_array()
   let mut from = 0
   let mut copied_until = 0
   let mut done = false
   while !done && (limit < 0 || pieces.length() < limit - 1) {
-    match find_from(self.nfa, chars, from, cache) {
+    match find_from(self.nfa, chars, from) {
       Some(found) => {
         pieces.push(char_range_string(chars, copied_until, found.start))
         copied_until = found.end
@@ -300,15 +387,139 @@ pub fn Regex::splitn(self : Regex, text : String, limit : Int) -> Array[String] 
 }
 
 ///|
-fn find_from(nfa : Nfa, text : Array[Char], from : Int, cache : Array[DfaEdge]) -> Match? {
-  let mut start = from
-  while start <= text.length() {
-    match match_end(nfa, text, start, cache) {
-      Some(end) => return Some({ start, end, })
-      None => start = start + 1
+priv struct SearchPath {
+  state : Int
+  start : Int
+}
+
+///|
+fn offer_search_path(
+  best : Array[Int?],
+  pending : Array[Int],
+  state : Int,
+  start : Int,
+) -> Unit {
+  match best[state] {
+    None => {
+      best[state] = Some(start)
+      pending.push(state)
+    }
+    Some(current) =>
+      if start < current {
+        best[state] = Some(start)
+        pending.push(state)
+      }
+  }
+}
+
+///|
+/// Epsilon closure that keeps the earliest start reaching each NFA state.
+fn search_closure(
+  nfa : Nfa,
+  seeds : Array[SearchPath],
+  pos : Int,
+  text : Array[Char],
+) -> Array[Int?] {
+  let best : Array[Int?] = []
+  for _ in nfa.states {
+    best.push(None)
+  }
+  let pending : Array[Int] = []
+  for seed in seeds {
+    offer_search_path(best, pending, seed.state, seed.start)
+  }
+  while pending.length() > 0 {
+    let state = pending.pop().unwrap()
+    let start = best[state].unwrap()
+    match nfa.states[state] {
+      Split(a, b) => {
+        offer_search_path(best, pending, a, start)
+        offer_search_path(best, pending, b, start)
+      }
+      Save(_, next) => offer_search_path(best, pending, next, start)
+      Begin(next) =>
+        if pos == 0 {
+          offer_search_path(best, pending, next, start)
+        }
+      Finish(next) =>
+        if pos == text.length() {
+          offer_search_path(best, pending, next, start)
+        }
+      Boundary(negated, next) =>
+        if word_boundary_matches(negated, pos, text) {
+          offer_search_path(best, pending, next, start)
+        }
+      _ => ()
     }
   }
-  None
+  best
+}
+
+///|
+/// Find in one forward NFA pass. For a shared state and boundary, an earlier
+/// start dominates every later start because both have the same future paths.
+fn find_from(nfa : Nfa, text : Array[Char], from : Int) -> Match? {
+  let mut pos = from
+  let mut seeds : Array[SearchPath] = [{ state: nfa.start, start: from, }]
+  let mut found : Match? = None
+  let mut scanning = true
+  while scanning {
+    let active = search_closure(nfa, seeds, pos, text)
+    match active[0] {
+      Some(start) =>
+        match found {
+          None => found = Some({ start, end: pos, })
+          Some(previous) =>
+            if start < previous.start ||
+              (start == previous.start && pos > previous.end) {
+              found = Some({ start, end: pos, })
+            }
+        }
+      None => ()
+    }
+    let can_extend = match found {
+      None => true
+      Some(match_found) => {
+        let mut can_continue = false
+        for state in 1..<active.length() {
+          match active[state] {
+            Some(start) if start <= match_found.start => can_continue = true
+            _ => ()
+          }
+        }
+        can_continue
+      }
+    }
+    if !can_extend || pos == text.length() {
+      scanning = false
+    } else {
+      let next_seeds : Array[SearchPath] = []
+      for state in 1..<active.length() {
+        match active[state] {
+          Some(start) =>
+            match nfa.states[state] {
+              Char(c, next) =>
+                if text[pos] == c {
+                  next_seeds.push({ state: next, start, })
+                }
+              CharClass(items, negated, next) =>
+                if class_matches(items, negated, text[pos].to_int()) {
+                  next_seeds.push({ state: next, start, })
+                }
+              Any(next) => next_seeds.push({ state: next, start, })
+              _ => ()
+            }
+          None => ()
+        }
+      }
+      pos = pos + 1
+      seeds = next_seeds
+      // New starts are added only after the old starts have consumed this
+      // character, so each boundary still gets an independent leftmost seed.
+      seeds.push({ state: nfa.start, start: pos, })
+    }
+  }
+  found
 }
 
 ///|
@@ -375,7 +586,10 @@ fn unit_offset(chars : Array[Char], char_index : Int) -> Int {
 
 ///|
 fn to_unit_match(found : Match, chars : Array[Char]) -> Match {
-  { start: unit_offset(chars, found.start), end: unit_offset(chars, found.end), }
+  {
+    start: unit_offset(chars, found.start),
+    end: unit_offset(chars, found.end),
+  }
 }
 
 ///|
@@ -412,7 +626,8 @@ fn write_capture(
   group : Int,
 ) -> Unit {
   match captures.group(group) {
-    Some(found) => builder.write_substring(text, found.start, found.end - found.start)
+    Some(found) =>
+      builder.write_substring(text, found.start, found.end - found.start)
     None => ()
   }
 }
@@ -431,14 +646,10 @@ pub fn Regex::contains(self : Regex, text : String) -> Bool {
 /// last participating iteration.
 pub fn Regex::captures(self : Regex, text : String) -> Captures? {
   let chars = text.to_array()
-  let mut start = 0
-  while start <= chars.length() {
-    match captures_at(self.nfa, chars, start, self.group_count) {
-      Some(result) => return Some(result)
-      None => start = start + 1
-    }
+  match find_from(self.nfa, chars, 0) {
+    Some(found) => captures_at(self.nfa, chars, found.start, self.group_count)
+    None => None
   }
-  None
 }
 
 ///|
@@ -466,6 +677,8 @@ fn compile_to(node : Node, next : Int, states : Array[State]) -> Int {
     Dot => emit(states, Any(next))
     Start => emit(states, Begin(next))
     End => emit(states, Finish(next))
+    WordBoundary => emit(states, Boundary(false, next))
+    NotWordBoundary => emit(states, Boundary(true, next))
     Concat(a, b) => {
       let right = compile_to(b, next, states)
       compile_to(a, right, states)
@@ -517,48 +730,96 @@ fn compile_to(node : Node, next : Int, states : Array[State]) -> Int {
   }
 }
 
+///|
 /// A cached DFA transition between canonical epsilon-closed NFA subsets.
 priv struct DfaEdge {
   from : Array[Int]
   code : Int
   at_end : Bool
+  after_word : Bool
   to : Array[Int]
 }
 
+///|
 fn same_subset(a : Array[Int], b : Array[Int]) -> Bool {
-  if a.length() != b.length() { return false }
+  if a.length() != b.length() {
+    return false
+  }
   for i in 0..<a.length() {
-    if a[i] != b[i] { return false }
+    if a[i] != b[i] {
+      return false
+    }
   }
   true
 }
 
+///|
 fn class_matches(items : Array[ClassItem], negated : Bool, code : Int) -> Bool {
   let mut inside = false
   for item in items {
     match item {
       Single(c) => if code == c.to_int() { inside = true }
-      Range(a, b) => if code >= a.to_int() && code <= b.to_int() { inside = true }
+      Range(a, b) =>
+        if code >= a.to_int() && code <= b.to_int() {
+          inside = true
+        }
       Builtin(kind, inverted) => {
         let matches = match kind {
           Digit => code >= '0'.to_int() && code <= '9'.to_int()
-          Word => (code >= 'a'.to_int() && code <= 'z'.to_int()) ||
-            (code >= 'A'.to_int() && code <= 'Z'.to_int()) ||
-            (code >= '0'.to_int() && code <= '9'.to_int()) || code == '_'.to_int()
-          Whitespace => code == ' '.to_int() || code == '\t'.to_int() ||
-            code == '\n'.to_int() || code == '\r'.to_int() || code == 0x0C
+          Word => is_ascii_word_code(code)
+          Whitespace =>
+            code == ' '.to_int() ||
+            code == '\t'.to_int() ||
+            code == 0x0B ||
+            code == '\n'.to_int() ||
+            code == '\r'.to_int() ||
+            code == 0x0C
         }
-        if (if inverted { !matches } else { matches }) { inside = true }
+        if (if inverted { !matches } else { matches }) {
+          inside = true
+        }
       }
       Property(name, inverted) => {
         let matches = unicode_category_matches(name, code)
-        if (if inverted { !matches } else { matches }) { inside = true }
+        if (if inverted { !matches } else { matches }) {
+          inside = true
+        }
       }
     }
   }
-  if negated { !inside } else { inside }
+  if negated {
+    !inside
+  } else {
+    inside
+  }
 }
 
+///|
+/// ASCII definition shared by `\w`, `\b`, and `\B`.
+fn is_ascii_word_code(code : Int) -> Bool {
+  (code >= 'a'.to_int() && code <= 'z'.to_int()) ||
+  (code >= 'A'.to_int() && code <= 'Z'.to_int()) ||
+  (code >= '0'.to_int() && code <= '9'.to_int()) ||
+  code == '_'.to_int()
+}
+
+///|
+/// Treat positions outside the text as non-word boundaries.
+fn is_word_at(text : Array[Char], pos : Int) -> Bool {
+  pos >= 0 && pos < text.length() && is_ascii_word_code(text[pos].to_int())
+}
+
+///|
+fn word_boundary_matches(negated : Bool, pos : Int, text : Array[Char]) -> Bool {
+  let boundary = is_word_at(text, pos - 1) != is_word_at(text, pos)
+  if negated {
+    !boundary
+  } else {
+    boundary
+  }
+}
+
+///|
 fn unicode_category_matches(category : String, code : Int) -> Bool {
   let ranges = unicode_category_ranges(category)
   let mut low = 0
@@ -590,7 +851,11 @@ fn capture_count(node : Node) -> Int {
 
 ///|
 fn max_int(a : Int, b : Int) -> Int {
-  if a > b { a } else { b }
+  if a > b {
+    a
+  } else {
+    b
+  }
 }
 
 ///|
@@ -599,7 +864,7 @@ fn closure(
   nfa : Nfa,
   seeds : Array[Int],
   pos : Int,
-  text_length : Int,
+  text : Array[Char],
 ) -> Array[Int] {
   let seen : Array[Bool] = []
   for _ in nfa.states {
@@ -621,7 +886,11 @@ fn closure(
         }
         Save(_, next) => pending.push(next)
         Begin(next) => if pos == 0 { pending.push(next) }
-        Finish(next) => if pos == text_length { pending.push(next) }
+        Finish(next) => if pos == text.length() { pending.push(next) }
+        Boundary(negated, next) =>
+          if word_boundary_matches(negated, pos, text) {
+            pending.push(next)
+          }
         _ => ()
       }
     }
@@ -701,7 +970,7 @@ fn tagged_closure(
   nfa : Nfa,
   seeds : Array[TaggedPath],
   pos : Int,
-  text_length : Int,
+  text : Array[Char],
 ) -> Array[TaggedPath?] {
   let best : Array[TaggedPath?] = []
   for _ in nfa.states {
@@ -725,9 +994,18 @@ fn tagged_closure(
             slots[slot] = Some(pos)
             offer_tagged(best, pending, next, slots)
           }
-          Begin(next) => if pos == 0 { offer_tagged(best, pending, next, path.slots) }
+          Begin(next) =>
+            if pos == 0 {
+              offer_tagged(best, pending, next, path.slots)
+            }
           Finish(next) =>
-            if pos == text_length { offer_tagged(best, pending, next, path.slots) }
+            if pos == text.length() {
+              offer_tagged(best, pending, next, path.slots)
+            }
+          Boundary(negated, next) =>
+            if word_boundary_matches(negated, pos, text) {
+              offer_tagged(best, pending, next, path.slots)
+            }
           _ => ()
         }
       None => ()
@@ -748,7 +1026,7 @@ fn captures_at(
     slots.push(None)
   }
   let seeds : Array[TaggedPath] = [{ state: nfa.start, slots, }]
-  let mut active = tagged_closure(nfa, seeds, start, text.length())
+  let mut active = tagged_closure(nfa, seeds, start, text)
   let mut pos = start
   let mut accepted : Array[Int?]? = None
   let mut accepted_end = -1
@@ -793,19 +1071,23 @@ fn captures_at(
         running = false
       } else {
         pos = pos + 1
-        active = tagged_closure(nfa, next_seeds, pos, text.length())
+        active = tagged_closure(nfa, next_seeds, pos, text)
       }
     }
   }
   match accepted {
     Some(final_slots) => {
-      let groups : Array[Match?] = [Some(to_unit_match({ start, end: accepted_end, }, text))]
+      let groups : Array[Match?] = [
+        Some(to_unit_match({ start, end: accepted_end, }, text)),
+      ]
       for group in 0..<group_count {
         let group_start = final_slots[2 * group]
         let group_end = final_slots[2 * group + 1]
         match (group_start, group_end) {
           (Some(group_start), Some(group_end)) =>
-            groups.push(Some(to_unit_match({ start: group_start, end: group_end, }, text)))
+            groups.push(
+              Some(to_unit_match({ start: group_start, end: group_end, }, text)),
+            )
           _ => groups.push(None)
         }
       }
@@ -815,17 +1097,22 @@ fn captures_at(
   }
 }
 
+///|
 fn dfa_step(
   nfa : Nfa,
   active : Array[Int],
-  code : Int,
+  text : Array[Char],
   pos : Int,
-  text_length : Int,
   cache : Array[DfaEdge],
 ) -> Array[Int] {
-  let at_end = pos == text_length
+  let code = text[pos - 1].to_int()
+  let at_end = pos == text.length()
+  let after_word = is_word_at(text, pos)
   for edge in cache {
-    if edge.code == code && edge.at_end == at_end && same_subset(edge.from, active) {
+    if edge.code == code &&
+      edge.at_end == at_end &&
+      edge.after_word == after_word &&
+      same_subset(edge.from, active) {
       return edge.to
     }
   }
@@ -834,21 +1121,30 @@ fn dfa_step(
     match nfa.states[state] {
       Char(c, next) => if code == c.to_int() { seeds.push(next) }
       CharClass(items, negated, next) =>
-        if class_matches(items, negated, code) { seeds.push(next) }
+        if class_matches(items, negated, code) {
+          seeds.push(next)
+        }
       Any(next) => seeds.push(next)
       _ => ()
     }
   }
-  let to = closure(nfa, seeds, pos, text_length)
-  if cache.length() == 256 { cache.clear() }
-  cache.push({ from: active, code, at_end, to, })
+  let to = closure(nfa, seeds, pos, text)
+  if cache.length() == 256 {
+    cache.clear()
+  }
+  cache.push({ from: active, code, at_end, after_word, to, })
   to
 }
 
 ///|
 /// Simulate one input boundary at a time and retain the furthest acceptance.
-fn match_end(nfa : Nfa, text : Array[Char], start : Int, cache : Array[DfaEdge]) -> Int? {
-  let mut active = closure(nfa, [nfa.start], start, text.length())
+fn match_end(
+  nfa : Nfa,
+  text : Array[Char],
+  start : Int,
+  cache : Array[DfaEdge],
+) -> Int? {
+  let mut active = closure(nfa, [nfa.start], start, text)
   let mut pos = start
   let mut longest : Int? = None
   while true {
@@ -861,7 +1157,56 @@ fn match_end(nfa : Nfa, text : Array[Char], start : Int, cache : Array[DfaEdge])
       break
     }
     pos = pos + 1
-    active = dfa_step(nfa, active, text[pos - 1].to_int(), pos, text.length(), cache)
+    active = dfa_step(nfa, active, text, pos, cache)
   }
   longest
+}
+
+///|
+test "single-pass search agrees with per-start matching on small inputs" {
+  let patterns = [
+    "a", "a|ab", "ab|b", "a*b", "a.*b", "^a", "b$", "(a?)*", "|a", "a|", "", "[a_]",
+    "\\b", "\\B", "\\w+", "\\p{L}+",
+  ]
+  for pattern in patterns {
+    let compiled = match Regex::compile(pattern) {
+      Ok(regex) => regex
+      Err(_) => abort("valid test pattern should compile")
+    }
+    for length in 0..<=4 {
+      let mut variants = 1
+      for _ in 0..<length {
+        variants = variants * 3
+      }
+      for mask in 0..<variants {
+        let builder = StringBuilder()
+        let mut bits = mask
+        for _ in 0..<length {
+          builder.write_char(
+            match bits % 3 {
+              0 => 'a'
+              1 => '_'
+              _ => '!'
+            },
+          )
+          bits = bits / 3
+        }
+        let chars = builder.to_string().to_array()
+        let cache : Array[DfaEdge] = []
+        let mut start = 0
+        let mut reference : Match? = None
+        while start <= chars.length() {
+          match match_end(compiled.nfa, chars, start, cache) {
+            Some(end) => {
+              reference = Some(to_unit_match({ start, end, }, chars))
+              break
+            }
+            None => start = start + 1
+          }
+        }
+        let text = char_range_string(chars, 0, chars.length())
+        assert_eq(compiled.find(text), reference)
+      }
+    }
+  }
 }

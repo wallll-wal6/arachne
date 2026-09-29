@@ -1,24 +1,35 @@
 // Copyright 2026 Arachne Authors
 // Licensed under the Apache License, Version 2.0.
 
+///|
 /// A hand-written recursive-descent parser for the regex grammar.
 ///
 /// Grammar, from loosest to tightest precedence:
 ///   alternation   := concatenation ( '|' concatenation )*
-///   concatenation := repetition+
+///   concatenation := repetition*
 ///   repetition    := atom ( '*' | '+' | '?' | count )?
 ///   count         := '{' digits ( ',' digits? )? '}'
 ///   atom          := '.' | '^' | '$' | class | '\' <any> | literal | '(' alternation ')'
 ///
 /// The grammar is small enough that no separate lexer is needed; the parser
 /// advances over Unicode scalar values in the pattern.
-
 priv struct Parser {
   src : Array[Char]
   mut pos : Int
   mut groups : Int
+  mut depth : Int
 }
 
+///|
+let max_pattern_length = 1024
+
+///|
+let max_capture_groups = 256
+
+///|
+let max_group_depth = 128
+
+///|
 /// Converts a code point back into a `Char`, substituting `?` for values
 /// that are not valid scalar values (which should not occur in practice).
 fn int_to_char(code : Int) -> Char {
@@ -28,24 +39,33 @@ fn int_to_char(code : Int) -> Char {
   }
 }
 
+///|
 /// Parses a pattern into an AST, or returns the first error encountered.
 pub fn parse(pattern : String) -> Result[Node, RegexError] {
-  if pattern.length() == 0 {
+  let chars = pattern.to_array()
+  if chars.length() > max_pattern_length {
+    return Err(
+      RegexError::new(
+        max_pattern_length, "pattern exceeds 1024 Unicode scalar values",
+      ),
+    )
+  }
+  if chars.length() == 0 {
     return Ok(Empty)
   }
-  let p = { src: pattern.to_array(), pos: 0, groups: 0 }
+  let p = { src: chars, pos: 0, groups: 0, depth: 0, }
   match p.parse_alternation() {
-    Ok(node) => {
+    Ok(node) =>
       if p.pos != p.src.length() {
         Err(RegexError::new(p.pos, "unexpected ')' or trailing character"))
       } else {
         Ok(node)
       }
-    }
     Err(e) => Err(e)
   }
 }
 
+///|
 /// Returns the code point at the cursor, or -1 at the end of input.
 fn Parser::peek(self : Parser) -> Int {
   if self.pos < self.src.length() {
@@ -55,10 +75,12 @@ fn Parser::peek(self : Parser) -> Int {
   }
 }
 
+///|
 fn Parser::advance(self : Parser) -> Unit {
   self.pos = self.pos + 1
 }
 
+///|
 /// Whether the next character can begin an atom, which excludes the end of
 /// input, ')' and '|'.
 fn Parser::can_start_atom(self : Parser) -> Bool {
@@ -66,6 +88,7 @@ fn Parser::can_start_atom(self : Parser) -> Bool {
   c >= 0 && c != ')'.to_int() && c != '|'.to_int()
 }
 
+///|
 fn Parser::parse_alternation(self : Parser) -> Result[Node, RegexError] {
   let first = match self.parse_concatenation() {
     Ok(n) => n
@@ -83,7 +106,11 @@ fn Parser::parse_alternation(self : Parser) -> Result[Node, RegexError] {
   Ok(left)
 }
 
+///|
 fn Parser::parse_concatenation(self : Parser) -> Result[Node, RegexError] {
+  if !self.can_start_atom() {
+    return Ok(Empty)
+  }
   let first = match self.parse_repetition() {
     Ok(n) => n
     Err(e) => return Err(e)
@@ -99,6 +126,7 @@ fn Parser::parse_concatenation(self : Parser) -> Result[Node, RegexError] {
   Ok(left)
 }
 
+///|
 fn Parser::parse_repetition(self : Parser) -> Result[Node, RegexError] {
   let atom = match self.parse_atom() {
     Ok(n) => n
@@ -114,23 +142,27 @@ fn Parser::parse_repetition(self : Parser) -> Result[Node, RegexError] {
   } else if c == '?'.to_int() {
     self.advance()
     Ok(Optional(atom))
-  } else if c == '{'.to_int() && self.pos + 1 < self.src.length() &&
-            self.src[self.pos + 1] >= '0' && self.src[self.pos + 1] <= '9' {
+  } else if c == '{'.to_int() &&
+    self.pos + 1 < self.src.length() &&
+    self.src[self.pos + 1] >= '0' &&
+    self.src[self.pos + 1] <= '9' {
     self.parse_count(atom)
   } else {
     Ok(atom)
   }
 }
 
+///|
 /// Counts are capped to keep Thompson expansion bounded.
 fn Parser::parse_number(self : Parser) -> Result[Int, RegexError] {
   let mut value = 0
   let start = self.pos
   while self.peek() >= '0'.to_int() && self.peek() <= '9'.to_int() {
-    value = value * 10 + self.peek() - '0'.to_int()
-    if value > 1000 {
+    let digit = self.peek() - '0'.to_int()
+    if value > 100 || (value == 100 && digit > 0) {
       return Err(RegexError::new(start, "repetition count exceeds 1000"))
     }
+    value = value * 10 + digit
     self.advance()
   }
   if self.pos == start {
@@ -140,6 +172,7 @@ fn Parser::parse_number(self : Parser) -> Result[Int, RegexError] {
   }
 }
 
+///|
 fn Parser::parse_count(self : Parser, atom : Node) -> Result[Node, RegexError] {
   self.advance()
   let min = match self.parse_number() {
@@ -163,12 +196,15 @@ fn Parser::parse_count(self : Parser, atom : Node) -> Result[Node, RegexError] {
   }
   self.advance()
   if max >= 0 && max < min {
-    Err(RegexError::new(self.pos, "repetition upper bound is below lower bound"))
+    Err(
+      RegexError::new(self.pos, "repetition upper bound is below lower bound"),
+    )
   } else {
     Ok(Count(atom, min, max))
   }
 }
 
+///|
 fn shorthand(code : Int) -> ClassItem? {
   match code {
     100 => Some(Builtin(Digit, false))
@@ -181,15 +217,19 @@ fn shorthand(code : Int) -> ClassItem? {
   }
 }
 
+///|
 fn escaped_char(code : Int) -> Char {
   match code {
     110 => '\n'
     114 => '\r'
     116 => '\t'
+    118 => int_to_char(0x0B)
+    98 => int_to_char(0x08)
     _ => int_to_char(code)
   }
 }
 
+///|
 fn normalize_property_name(name : String) -> String? {
   match name {
     "L" | "Letter" => Some("L")
@@ -233,9 +273,15 @@ fn normalize_property_name(name : String) -> String? {
   }
 }
 
-fn Parser::parse_property(self : Parser, negated : Bool) -> Result[ClassItem, RegexError] {
+///|
+fn Parser::parse_property(
+  self : Parser,
+  negated : Bool,
+) -> Result[ClassItem, RegexError] {
   if self.peek() != '{'.to_int() {
-    return Err(RegexError::new(self.pos, "expected '{' after Unicode property escape"))
+    return Err(
+      RegexError::new(self.pos, "expected '{' after Unicode property escape"),
+    )
   }
   self.advance()
   let start = self.pos
@@ -254,6 +300,7 @@ fn Parser::parse_property(self : Parser, negated : Bool) -> Result[ClassItem, Re
   }
 }
 
+///|
 fn Parser::class_atom(self : Parser) -> Result[ClassItem, RegexError] {
   if self.peek() == '\\'.to_int() {
     self.advance()
@@ -275,21 +322,28 @@ fn Parser::class_atom(self : Parser) -> Result[ClassItem, RegexError] {
   Ok(Single(c))
 }
 
+///|
 fn Parser::parse_class(self : Parser) -> Result[Node, RegexError] {
   self.advance()
   let negated = self.peek() == '^'.to_int()
-  if negated { self.advance() }
+  if negated {
+    self.advance()
+  }
   let items : Array[ClassItem] = []
   while self.peek() >= 0 && self.peek() != ']'.to_int() {
     let first = match self.class_atom() {
       Ok(c) => c
       Err(e) => return Err(e)
     }
-    if self.peek() == '-'.to_int() && self.pos + 1 < self.src.length() &&
-       self.src[self.pos + 1] != ']' {
+    if self.peek() == '-'.to_int() &&
+      self.pos + 1 < self.src.length() &&
+      self.src[self.pos + 1] != ']' {
       let first_char = match first {
         Single(c) => c
-        _ => return Err(RegexError::new(self.pos, "character category cannot start a range"))
+        _ =>
+          return Err(
+            RegexError::new(self.pos, "character category cannot start a range"),
+          )
       }
       self.advance()
       let last = match self.class_atom() {
@@ -298,7 +352,10 @@ fn Parser::parse_class(self : Parser) -> Result[Node, RegexError] {
       }
       let last_char = match last {
         Single(c) => c
-        _ => return Err(RegexError::new(self.pos, "character category cannot end a range"))
+        _ =>
+          return Err(
+            RegexError::new(self.pos, "character category cannot end a range"),
+          )
       }
       if first_char.to_int() > last_char.to_int() {
         return Err(RegexError::new(self.pos, "descending character range"))
@@ -318,6 +375,7 @@ fn Parser::parse_class(self : Parser) -> Result[Node, RegexError] {
   Ok(Class(items, negated))
 }
 
+///|
 fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
   let c = self.peek()
   if c < 0 {
@@ -345,6 +403,12 @@ fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
       return Err(RegexError::new(self.pos, "trailing backslash"))
     }
     self.advance()
+    if escaped == 'b'.to_int() {
+      return Ok(WordBoundary)
+    }
+    if escaped == 'B'.to_int() {
+      return Ok(NotWordBoundary)
+    }
     match shorthand(escaped) {
       _ if escaped == 'p'.to_int() || escaped == 'P'.to_int() => {
         let property = match self.parse_property(escaped == 'P'.to_int()) {
@@ -359,12 +423,22 @@ fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
   }
   if c == '('.to_int() {
     self.advance()
-    if self.peek() == ')'.to_int() {
-      return Err(RegexError::new(self.pos, "empty group"))
+    if self.groups >= max_capture_groups {
+      return Err(
+        RegexError::new(self.pos, "capture group limit of 256 exceeded"),
+      )
+    }
+    if self.depth >= max_group_depth {
+      return Err(
+        RegexError::new(self.pos, "group nesting limit of 128 exceeded"),
+      )
     }
     self.groups = self.groups + 1
     let group = self.groups
-    let inner = match self.parse_alternation() {
+    self.depth = self.depth + 1
+    let parsed = self.parse_alternation()
+    self.depth = self.depth - 1
+    let inner = match parsed {
       Ok(n) => n
       Err(e) => return Err(e)
     }
@@ -377,8 +451,13 @@ fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
   if c == ')'.to_int() {
     return Err(RegexError::new(self.pos, "unmatched ')'"))
   }
-  if c == '|'.to_int() || c == '*'.to_int() || c == '+'.to_int() || c == '?'.to_int() {
-    return Err(RegexError::new(self.pos, "quantifier or alternation with no operand"))
+  if c == '|'.to_int() ||
+    c == '*'.to_int() ||
+    c == '+'.to_int() ||
+    c == '?'.to_int() {
+    return Err(
+      RegexError::new(self.pos, "quantifier or alternation with no operand"),
+    )
   }
   self.advance()
   Ok(Lit(int_to_char(c)))
