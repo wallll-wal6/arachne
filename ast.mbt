@@ -4,7 +4,7 @@
 /// The parsed form of a regular expression.
 ///
 /// The parser lowers a pattern string into this tree; the engine walks it.
-/// Nine nodes cover the first milestone: the empty pattern, single
+/// Ten nodes cover the grammar: the empty pattern, single
 /// characters, the any-dot, two boundary anchors, concatenation, alternation,
 /// and the three postfix quantifiers. Parentheses never become a node — they only shape
 /// precedence while parsing, so they are discarded once a subtree is built.
@@ -23,7 +23,7 @@ pub(all) enum Node {
 
 /// Renders a single character into a string.
 fn char_to_string(c : Char) -> String {
-  StringBuilder().write_char(c).to_string()
+  c.to_string()
 }
 
 /// Reports whether a character has special meaning in the regex grammar and
@@ -60,6 +60,7 @@ fn wrapped(node : Node) -> String {
     Start => node.to_pattern()
     End => node.to_pattern()
     Empty => node.to_pattern()
+    Alt(_, _) => node.to_pattern()
     _ => "(" + node.to_pattern() + ")"
   }
 }

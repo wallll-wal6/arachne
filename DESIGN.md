@@ -1,13 +1,19 @@
 # Design notes
 
-## First milestone: make the grammar inspectable
+## Syntax and public behavior
 
-The parser is a hand-written recursive-descent parser. Its functions follow precedence directly: alternation calls concatenation, concatenation calls repetition, and repetition calls atom parsing. Parentheses control precedence but do not need a node of their own.
+The recursive-descent parser follows precedence directly: alternation calls concatenation, concatenation calls repetition, and repetition calls atom parsing. Parentheses shape the AST but do not become nodes. The syntax and parse errors remain those of the first milestone.
 
-The AST evaluator is deliberately the first execution model. It keeps the public `Regex` API independent from the eventual automaton and makes pattern semantics visible in a small amount of code. Its cost can grow quickly when alternatives and repetitions combine, so it is not the final performance model.
+`Regex::compile` parses once and stores a compiled Thompson NFA. `full_match` requires acceptance at the end of the whole input. `find` tries start positions from left to right and records the furthest accepting end for the first start that matches. Thus alternation order does not override leftmost-longest selection. `contains` tests whether `find` succeeds.
 
-Anchors are represented as AST nodes and checked against the input boundaries during evaluation. Escaping them keeps `^` and `$` available as literals. This keeps the syntax rule explicit instead of adding special cases to `find`.
+## Thompson construction
 
-## Next boundary
+Each instruction has a state index. A literal or dot consumes one input code unit; a split forks without consuming input. The `Begin` and `Finish` instructions assert absolute input boundaries, preserving the meaning of `^` and `$` even during a search. The accepting instruction is state zero.
 
-The next engine step is to compile the existing AST into a Thompson NFA and simulate sets of active states. That replaces recursive path enumeration while preserving the parser and public matching API. Character classes and counted repetitions can then be added with parser-level tests and explicit semantics before considering DFA caching or backreferences.
+Compilation works backward from a known continuation. Concatenation connects its right fragment before its left. Alternation starts at a split leading to both branches. Star and plus wire a split back to the body; optional uses a split between its body and the continuation. Empty uses the continuation directly. This construction needs no recursive matching over the AST.
+
+## State-set simulation
+
+At each input boundary, an iterative epsilon closure follows split and satisfied assertion transitions. A visited-state set stops nullable cycles such as `(a?)*`. The simulator advances all active consuming states together for each code unit, then takes another closure. It records every accepting boundary and returns the furthest one.
+
+For a fixed start position, simulation uses space proportional to the number of NFA states and time proportional to the input length times the state count. `find` tries each possible start in order, so a search may take quadratic time in input length times state count. There is no DFA cache. Character classes, counted repetitions, captures, and backreferences are outside this stage.

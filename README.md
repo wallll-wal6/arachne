@@ -1,6 +1,6 @@
 # Arachne
 
-A small regular-expression engine written in pure MoonBit. It parses a pattern into an AST and evaluates that tree against input text. The first milestone focuses on a compact, inspectable core before adding automaton compilation.
+A small regular-expression engine written in pure MoonBit. It parses a pattern into an AST, compiles the tree into a Thompson NFA, and simulates sets of active states over input text.
 
 ## Current syntax
 
@@ -15,7 +15,7 @@ A small regular-expression engine written in pure MoonBit. It parses a pattern i
 | `^`, `$` | Beginning and end of the input |
 | `\.` | Escaped literal metacharacter |
 
-Character classes, counted repetitions, capture groups, and backreferences are not implemented yet. Matching currently walks the AST and is intended for learning and small patterns; this milestone does not promise a linear-time bound for adversarial expressions.
+Character classes, counted repetitions, capture groups, and backreferences are not implemented. The engine does not build or cache a DFA.
 
 ## Use
 
@@ -30,6 +30,8 @@ match @arachne.Regex::compile("^(ab|cd)+$") {
 
 The public API provides `Regex::compile`, `Regex::full_match`, `Regex::find`, `Regex::contains`, and `Regex::pattern`. `parse` is also public when callers need the syntax tree directly.
 
+`find` returns the leftmost match and, at that start position, the longest possible end position. Empty matches are valid. `^` and `$` assert the boundaries of the entire input, including when searching with `find`; escape them to match literal characters. Matching advances over MoonBit string code units, as in the first milestone.
+
 ## Development
 
 This is a MoonBit module managed by `moon.mod`. Build it with:
@@ -38,7 +40,7 @@ This is a MoonBit module managed by `moon.mod`. Build it with:
 moon check
 ```
 
-The source is kept at the package root so the parser, AST, and evaluator can be read together. See [DESIGN.md](DESIGN.md) for the current execution model and the next implementation boundary.
+Run the suite with `moon test`. The source is kept at the package root so the parser, AST, and NFA engine can be read together. See [DESIGN.md](DESIGN.md) for the execution model and its limits.
 
 ## License
 
