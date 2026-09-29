@@ -16,13 +16,19 @@ pub(all) enum BuiltinClass {
   Word
   Whitespace
 } derive(Eq, @debug.Debug)
+pub fn BuiltinClass::equal(Self, Self) -> Bool
+pub fn BuiltinClass::not_equal(Self, Self) -> Bool
+pub fn BuiltinClass::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Captures {
   // private fields
 } derive(Eq, @debug.Debug)
+pub fn Captures::equal(Self, Self) -> Bool
 pub fn Captures::group(Self, Int) -> Match?
 pub fn Captures::len(Self) -> Int
+pub fn Captures::not_equal(Self, Self) -> Bool
 pub fn Captures::text(Self, Int, String) -> String?
+pub fn Captures::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ClassItem {
   Single(Char)
@@ -30,12 +36,18 @@ pub(all) enum ClassItem {
   Builtin(BuiltinClass, Bool)
   Property(String, Bool)
 } derive(Eq, @debug.Debug)
+pub fn ClassItem::equal(Self, Self) -> Bool
+pub fn ClassItem::not_equal(Self, Self) -> Bool
+pub fn ClassItem::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Match {
   start : Int
   end : Int
 } derive(Eq, @debug.Debug)
+pub fn Match::equal(Self, Self) -> Bool
+pub fn Match::not_equal(Self, Self) -> Bool
 pub fn Match::text(Self, String) -> String
+pub fn Match::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Node {
   Empty
@@ -54,7 +66,10 @@ pub(all) enum Node {
   Optional(Node)
   Count(Node, Int, Int)
 } derive(Eq, @debug.Debug)
+pub fn Node::equal(Self, Self) -> Bool
+pub fn Node::not_equal(Self, Self) -> Bool
 pub fn Node::to_pattern(Self) -> String
+pub fn Node::to_repr(Self) -> @debug.Repr
 
 pub struct Regex {
   // private fields
@@ -62,35 +77,47 @@ pub struct Regex {
 pub fn Regex::captures(Self, String) -> Captures?
 pub fn Regex::compile(String) -> Result[Self, RegexError]
 pub fn Regex::contains(Self, String) -> Bool
+pub fn Regex::equal(Self, Self) -> Bool
 pub fn Regex::find(Self, String) -> Match?
 pub fn Regex::find_all(Self, String) -> Array[Match]
 pub fn Regex::full_match(Self, String) -> Bool
+pub fn Regex::not_equal(Self, Self) -> Bool
 pub fn Regex::pattern(Self) -> String
 pub fn Regex::replace_all(Self, String, String) -> String
 pub fn Regex::replace_first(Self, String, String) -> String
 pub fn Regex::replace_n(Self, String, String, Int) -> String
 pub fn Regex::split(Self, String) -> Array[String]
 pub fn Regex::splitn(Self, String, Int) -> Array[String]
+pub fn Regex::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RegexError {
   pos : Int
   msg : String
 } derive(Eq, @debug.Debug)
+pub fn RegexError::equal(Self, Self) -> Bool
 pub fn RegexError::new(Int, String) -> Self
+pub fn RegexError::not_equal(Self, Self) -> Bool
+pub fn RegexError::to_repr(Self) -> @debug.Repr
 pub fn RegexError::to_string(Self) -> String
 
 pub(all) struct RegexSet {
   // private fields
 } derive(Eq, @debug.Debug)
 pub fn RegexSet::compile(Array[String]) -> Result[Self, RegexSetError]
+pub fn RegexSet::equal(Self, Self) -> Bool
 pub fn RegexSet::is_match(Self, String) -> Bool
 pub fn RegexSet::len(Self) -> Int
 pub fn RegexSet::matching_patterns(Self, String) -> Array[Int]
+pub fn RegexSet::not_equal(Self, Self) -> Bool
+pub fn RegexSet::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RegexSetError {
   pattern_index : Int
   error : RegexError
 } derive(Eq, @debug.Debug)
+pub fn RegexSetError::equal(Self, Self) -> Bool
+pub fn RegexSetError::not_equal(Self, Self) -> Bool
+pub fn RegexSetError::to_repr(Self) -> @debug.Repr
 pub fn RegexSetError::to_string(Self) -> String
 
 // Type aliases

@@ -10,6 +10,12 @@ pub(all) struct RegexError {
 } derive(Debug, Eq)
 
 ///|
+pub extend RegexError with Eq::{not_equal, equal}
+
+///|
+pub extend RegexError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 pub fn RegexError::new(pos : Int, msg : String) -> RegexError {
   { pos, msg, }
 }

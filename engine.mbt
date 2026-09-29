@@ -16,10 +16,22 @@ priv enum State {
 } derive(Debug, Eq)
 
 ///|
+pub extend Regex with Eq::{not_equal, equal}
+
+///|
+pub extend Regex with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 priv struct Nfa {
   states : Array[State]
   start : Int
 } derive(Debug, Eq)
+
+///|
+pub extend Match with Eq::{not_equal, equal}
+
+///|
+pub extend Match with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 pub struct Regex {
@@ -30,10 +42,22 @@ pub struct Regex {
 } derive(Debug, Eq)
 
 ///|
+pub extend Captures with Eq::{not_equal, equal}
+
+///|
+pub extend Captures with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 pub(all) struct Match {
   start : Int
   end : Int
 } derive(Debug, Eq)
+
+///|
+pub extend RegexSet with Eq::{not_equal, equal}
+
+///|
+pub extend RegexSet with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// A complete match and the numbered capture groups within it. Group zero is
@@ -42,6 +66,12 @@ pub(all) struct Match {
 pub(all) struct Captures {
   priv groups : Array[Match?]
 } derive(Debug, Eq)
+
+///|
+pub extend RegexSetError with Eq::{not_equal, equal}
+
+///|
+pub extend RegexSetError with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// A compiled collection of patterns for routing, filtering, and rule sets.

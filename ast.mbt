@@ -25,6 +25,12 @@ pub(all) enum Node {
 } derive(Debug, Eq)
 
 ///|
+pub extend Node with Eq::{not_equal, equal}
+
+///|
+pub extend Node with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// A character or inclusive range inside a character class.
 pub(all) enum ClassItem {
   Single(Char)
@@ -34,12 +40,24 @@ pub(all) enum ClassItem {
 } derive(Debug, Eq)
 
 ///|
+pub extend ClassItem with Eq::{not_equal, equal}
+
+///|
+pub extend ClassItem with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Common character categories available through shorthand escapes.
 pub(all) enum BuiltinClass {
   Digit
   Word
   Whitespace
 } derive(Debug, Eq)
+
+///|
+pub extend BuiltinClass with Eq::{not_equal, equal}
+
+///|
+pub extend BuiltinClass with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Renders a single character into a string.
