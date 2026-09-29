@@ -3,11 +3,8 @@
 
 /// The parsed form of a regular expression.
 ///
-/// The parser lowers a pattern string into this tree; the engine walks it.
-/// Nodes cover the grammar: the empty pattern, single
-/// characters, the any-dot, two boundary anchors, concatenation, alternation,
-/// and the three postfix quantifiers. Parentheses never become a node — they only shape
-/// precedence while parsing, so they are discarded once a subtree is built.
+/// The parser lowers a pattern into this tree. Capturing parentheses remain
+/// explicit so the compiler can attach spans to their opening order.
 pub(all) enum Node {
   Empty
   Lit(Char)
@@ -17,6 +14,7 @@ pub(all) enum Node {
   End
   Concat(Node, Node)
   Alt(Node, Node)
+  Capture(Int, Node)
   Star(Node)
   Plus(Node)
   Optional(Node)
@@ -27,6 +25,15 @@ pub(all) enum Node {
 pub(all) enum ClassItem {
   Single(Char)
   Range(Char, Char)
+  Builtin(BuiltinClass, Bool)
+  Property(String, Bool)
+} derive(Debug, Eq)
+
+/// Common character categories available through shorthand escapes.
+pub(all) enum BuiltinClass {
+  Digit
+  Word
+  Whitespace
 } derive(Debug, Eq)
 
 /// Renders a single character into a string.
@@ -56,7 +63,13 @@ fn is_metachar(c : Char) -> Bool {
 /// Renders a literal character, escaping it when the grammar would otherwise
 /// read it as an operator.
 fn escaped_literal(c : Char) -> String {
-  if is_metachar(c) {
+  if c == '\n' {
+    "\\n"
+  } else if c == '\r' {
+    "\\r"
+  } else if c == '\t' {
+    "\\t"
+  } else if is_metachar(c) {
     "\\" + char_to_string(c)
   } else {
     char_to_string(c)
@@ -74,6 +87,7 @@ fn wrapped(node : Node) -> String {
     End => node.to_pattern()
     Empty => node.to_pattern()
     Alt(_, _) => node.to_pattern()
+    Capture(_, _) => node.to_pattern()
     _ => "(" + node.to_pattern() + ")"
   }
 }
@@ -101,6 +115,19 @@ pub fn Node::to_pattern(self : Node) -> String {
         let part = match item {
           Single(c) => class_char(c)
           Range(a, b) => class_char(a) + "-" + class_char(b)
+          Builtin(kind, negated) => {
+            match (kind, negated) {
+              (Digit, false) => "\\d"
+              (Digit, true) => "\\D"
+              (Word, false) => "\\w"
+              (Word, true) => "\\W"
+              (Whitespace, false) => "\\s"
+              (Whitespace, true) => "\\S"
+            }
+          }
+          Property(name, negated) => {
+            "\\" + (if negated { "P" } else { "p" }) + "{" + name + "}"
+          }
         }
         result = result + part
       }
@@ -108,6 +135,8 @@ pub fn Node::to_pattern(self : Node) -> String {
     }
     Concat(a, b) => a.to_pattern() + b.to_pattern()
     Alt(a, b) => "(" + a.to_pattern() + "|" + b.to_pattern() + ")"
+    Capture(_, Alt(a, b)) => "(" + a.to_pattern() + "|" + b.to_pattern() + ")"
+    Capture(_, node) => "(" + node.to_pattern() + ")"
     Star(a) => wrapped(a) + "*"
     Plus(a) => wrapped(a) + "+"
     Optional(a) => wrapped(a) + "?"

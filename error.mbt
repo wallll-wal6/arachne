@@ -1,8 +1,8 @@
 // Copyright 2026 Arachne Authors
 // Licensed under the Apache License, Version 2.0.
 
-/// A compile-time error for an invalid pattern, pinned to an offset into the
-/// pattern string.
+/// A compile-time error for an invalid pattern. `pos` counts Unicode scalar
+/// values from the start of the pattern.
 pub(all) struct RegexError {
   pos : Int
   msg : String

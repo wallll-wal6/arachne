@@ -11,11 +11,12 @@
 ///   atom          := '.' | '^' | '$' | class | '\' <any> | literal | '(' alternation ')'
 ///
 /// The grammar is small enough that no separate lexer is needed; the parser
-/// reads code units straight from the pattern string.
+/// advances over Unicode scalar values in the pattern.
 
 priv struct Parser {
-  src : String
+  src : Array[Char]
   mut pos : Int
+  mut groups : Int
 }
 
 /// Converts a code point back into a `Char`, substituting `?` for values
@@ -32,10 +33,10 @@ pub fn parse(pattern : String) -> Result[Node, RegexError] {
   if pattern.length() == 0 {
     return Ok(Empty)
   }
-  let p = { src: pattern, pos: 0 }
+  let p = { src: pattern.to_array(), pos: 0, groups: 0 }
   match p.parse_alternation() {
     Ok(node) => {
-      if p.pos != pattern.length() {
+      if p.pos != p.src.length() {
         Err(RegexError::new(p.pos, "unexpected ')' or trailing character"))
       } else {
         Ok(node)
@@ -168,16 +169,110 @@ fn Parser::parse_count(self : Parser, atom : Node) -> Result[Node, RegexError] {
   }
 }
 
-fn Parser::class_atom(self : Parser) -> Result[Char, RegexError] {
+fn shorthand(code : Int) -> ClassItem? {
+  match code {
+    100 => Some(Builtin(Digit, false))
+    68 => Some(Builtin(Digit, true))
+    119 => Some(Builtin(Word, false))
+    87 => Some(Builtin(Word, true))
+    115 => Some(Builtin(Whitespace, false))
+    83 => Some(Builtin(Whitespace, true))
+    _ => None
+  }
+}
+
+fn escaped_char(code : Int) -> Char {
+  match code {
+    110 => '\n'
+    114 => '\r'
+    116 => '\t'
+    _ => int_to_char(code)
+  }
+}
+
+fn normalize_property_name(name : String) -> String? {
+  match name {
+    "L" | "Letter" => Some("L")
+    "Lu" | "Uppercase_Letter" => Some("Lu")
+    "Ll" | "Lowercase_Letter" => Some("Ll")
+    "Lt" | "Titlecase_Letter" => Some("Lt")
+    "Lm" | "Modifier_Letter" => Some("Lm")
+    "Lo" | "Other_Letter" => Some("Lo")
+    "M" | "Mark" => Some("M")
+    "Mn" | "Nonspacing_Mark" => Some("Mn")
+    "Mc" | "Spacing_Mark" => Some("Mc")
+    "Me" | "Enclosing_Mark" => Some("Me")
+    "N" | "Number" => Some("N")
+    "Nd" | "Decimal_Number" => Some("Nd")
+    "Nl" | "Letter_Number" => Some("Nl")
+    "No" | "Other_Number" => Some("No")
+    "P" | "Punctuation" => Some("P")
+    "Pc" | "Connector_Punctuation" => Some("Pc")
+    "Pd" | "Dash_Punctuation" => Some("Pd")
+    "Ps" | "Open_Punctuation" => Some("Ps")
+    "Pe" | "Close_Punctuation" => Some("Pe")
+    "Pi" | "Initial_Punctuation" => Some("Pi")
+    "Pf" | "Final_Punctuation" => Some("Pf")
+    "Po" | "Other_Punctuation" => Some("Po")
+    "S" | "Symbol" => Some("S")
+    "Sm" | "Math_Symbol" => Some("Sm")
+    "Sc" | "Currency_Symbol" => Some("Sc")
+    "Sk" | "Modifier_Symbol" => Some("Sk")
+    "So" | "Other_Symbol" => Some("So")
+    "Z" | "Separator" => Some("Z")
+    "Zs" | "Space_Separator" => Some("Zs")
+    "Zl" | "Line_Separator" => Some("Zl")
+    "Zp" | "Paragraph_Separator" => Some("Zp")
+    "C" | "Other" => Some("C")
+    "Cc" | "Control" => Some("Cc")
+    "Cf" | "Format" => Some("Cf")
+    "Cs" | "Surrogate" => Some("Cs")
+    "Co" | "Private_Use" => Some("Co")
+    "Cn" | "Unassigned" => Some("Cn")
+    _ => None
+  }
+}
+
+fn Parser::parse_property(self : Parser, negated : Bool) -> Result[ClassItem, RegexError] {
+  if self.peek() != '{'.to_int() {
+    return Err(RegexError::new(self.pos, "expected '{' after Unicode property escape"))
+  }
+  self.advance()
+  let start = self.pos
+  let name = StringBuilder()
+  while self.peek() >= 0 && self.peek() != '}'.to_int() {
+    name.write_char(int_to_char(self.peek()))
+    self.advance()
+  }
+  if self.peek() != '}'.to_int() {
+    return Err(RegexError::new(start, "unclosed Unicode property"))
+  }
+  self.advance()
+  match normalize_property_name(name.to_string()) {
+    Some(property) => Ok(Property(property, negated))
+    None => Err(RegexError::new(start, "unknown Unicode general category"))
+  }
+}
+
+fn Parser::class_atom(self : Parser) -> Result[ClassItem, RegexError] {
   if self.peek() == '\\'.to_int() {
     self.advance()
     if self.peek() < 0 {
       return Err(RegexError::new(self.pos, "trailing backslash in class"))
     }
+    let escaped = self.peek()
+    self.advance()
+    if escaped == 'p'.to_int() || escaped == 'P'.to_int() {
+      return self.parse_property(escaped == 'P'.to_int())
+    }
+    match shorthand(escaped) {
+      Some(item) => return Ok(item)
+      None => return Ok(Single(escaped_char(escaped)))
+    }
   }
   let c = int_to_char(self.peek())
   self.advance()
-  Ok(c)
+  Ok(Single(c))
 }
 
 fn Parser::parse_class(self : Parser) -> Result[Node, RegexError] {
@@ -192,17 +287,25 @@ fn Parser::parse_class(self : Parser) -> Result[Node, RegexError] {
     }
     if self.peek() == '-'.to_int() && self.pos + 1 < self.src.length() &&
        self.src[self.pos + 1] != ']' {
+      let first_char = match first {
+        Single(c) => c
+        _ => return Err(RegexError::new(self.pos, "character category cannot start a range"))
+      }
       self.advance()
       let last = match self.class_atom() {
         Ok(c) => c
         Err(e) => return Err(e)
       }
-      if first.to_int() > last.to_int() {
+      let last_char = match last {
+        Single(c) => c
+        _ => return Err(RegexError::new(self.pos, "character category cannot end a range"))
+      }
+      if first_char.to_int() > last_char.to_int() {
         return Err(RegexError::new(self.pos, "descending character range"))
       }
-      items.push(Range(first, last))
+      items.push(Range(first_char, last_char))
     } else {
-      items.push(Single(first))
+      items.push(first)
     }
   }
   if self.peek() != ']'.to_int() {
@@ -242,13 +345,25 @@ fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
       return Err(RegexError::new(self.pos, "trailing backslash"))
     }
     self.advance()
-    return Ok(Lit(int_to_char(escaped)))
+    match shorthand(escaped) {
+      _ if escaped == 'p'.to_int() || escaped == 'P'.to_int() => {
+        let property = match self.parse_property(escaped == 'P'.to_int()) {
+          Ok(item) => item
+          Err(error) => return Err(error)
+        }
+        return Ok(Class([property], false))
+      }
+      Some(item) => return Ok(Class([item], false))
+      None => return Ok(Lit(escaped_char(escaped)))
+    }
   }
   if c == '('.to_int() {
     self.advance()
     if self.peek() == ')'.to_int() {
       return Err(RegexError::new(self.pos, "empty group"))
     }
+    self.groups = self.groups + 1
+    let group = self.groups
     let inner = match self.parse_alternation() {
       Ok(n) => n
       Err(e) => return Err(e)
@@ -257,7 +372,7 @@ fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
       return Err(RegexError::new(self.pos, "unclosed group"))
     }
     self.advance()
-    return Ok(inner)
+    return Ok(Capture(group, inner))
   }
   if c == ')'.to_int() {
     return Err(RegexError::new(self.pos, "unmatched ')'"))

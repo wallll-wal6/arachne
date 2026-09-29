@@ -53,10 +53,42 @@ test "optional" {
 }
 
 ///|
-test "dot matches any single code unit" {
+test "dot matches any single Unicode scalar" {
   assert_true(regex(".").full_match("x"))
   assert_true(!regex(".").full_match(""))
   assert_true(!regex(".").full_match("xy"))
+}
+
+///|
+test "shorthand classes support practical field filtering" {
+  assert_true(regex("\\d+").full_match("2048"))
+  assert_true(!regex("\\d+").full_match("20x8"))
+  assert_true(regex("[\\w.-]+").full_match("moon.log-2"))
+  assert_true(!regex("\\W+").full_match("abc_12"))
+  assert_true(regex("\\s+").full_match(" \t\n"))
+  assert_true(regex("[^\\d]+").full_match("room-x"))
+  assert_eq(regex("\\d+").find("机房 42 号").map(fn(m) { m.text("机房 42 号") }), Some("42"))
+}
+
+///|
+test "matching advances by Unicode scalar and reports UTF-16 offsets" {
+  let cat = regex("🐈")
+  assert_true(cat.full_match("🐈"))
+  assert_true(regex(".").full_match("🐈"))
+  assert_eq(cat.find("x🐈y"), Some({ start: 1, end: 3, }))
+  assert_eq(regex("🐈+").replace_all("🐈🐈!", "cat"), "cat!")
+  assert_eq(regex("🐈").split("a🐈b"), ["a", "b"])
+}
+
+///|
+test "Unicode general categories match multilingual text" {
+  assert_true(regex("[\\p{L}\\p{M}]+").full_match("東京বাংলা"))
+  assert_true(regex("\\p{Lu}\\p{Ll}+").full_match("Moon"))
+  assert_true(regex("\\p{N}+").full_match("١٢Ⅳ"))
+  assert_true(regex("[\\p{L}\\p{N}_]+").full_match("東京_42"))
+  assert_true(!regex("\\p{L}+").full_match("42"))
+  assert_true(regex("\\P{L}+").full_match("42!"))
+  assert_eq(regex("\\p{L}+").find("v2東京:ok").map(fn(m) { m.text("v2東京:ok") }), Some("v"))
 }
 
 ///|
@@ -197,4 +229,66 @@ test "split retains empty fields and respects the piece limit" {
   assert_eq(regex("z").split("abc"), ["abc"])
   assert_eq(regex("").split("ab"), ["", "a", "b", ""])
   assert_eq(regex("").splitn("ab", 2), ["", "ab"])
+}
+
+test "captures expose numbered groups and the complete match" {
+  let found = match regex("([a-z]+)-([0-9]+)").captures("id=moon-42;") {
+    Some(captures) => captures
+    None => abort("expected a capture result")
+  }
+  assert_eq(found.len(), 3)
+  assert_eq(found.text(0, "id=moon-42;"), Some("moon-42"))
+  assert_eq(found.text(1, "id=moon-42;"), Some("moon"))
+  assert_eq(found.text(2, "id=moon-42;"), Some("42"))
+  assert_eq(found.group(3), None)
+}
+
+test "unmatched optional captures are represented as none" {
+  let found = match regex("(a)?b").captures("b") {
+    Some(captures) => captures
+    None => abort("expected a capture result")
+  }
+  assert_eq(found.text(0, "b"), Some("b"))
+  assert_eq(found.group(1), None)
+}
+
+test "captures honor leftmost-longest matching and repeated groups" {
+  let found = match regex("((a|ab)+)").captures("abab") {
+    Some(captures) => captures
+    None => abort("expected a capture result")
+  }
+  assert_eq(found.text(0, "abab"), Some("abab"))
+  assert_eq(found.text(1, "abab"), Some("abab"))
+  assert_eq(found.text(2, "abab"), Some("ab"))
+  assert_eq(regex("(a)").captures("bbb"), None)
+}
+
+test "replacement expands numeric captures and leaves missing captures empty" {
+  let pair = regex("([a-z]+), ([a-z]+)")
+  assert_eq(pair.replace_all("doe, jane", "$2 $1"), "jane doe")
+  assert_eq(regex("(a)?b").replace_first("b", "<$1>"), "<>")
+  assert_eq(pair.replace_first("doe, jane", "${2}, ${1}"), "jane, doe")
+  assert_eq(pair.replace_first("doe, jane", "$$$2"), "$jane")
+}
+
+test "regex sets report every matching rule by stable index" {
+  let set = match RegexSet::compile(["^INFO", "error", "warn", "error [0-9]+" ]) {
+    Ok(set) => set
+    Err(_) => abort("valid patterns should compile")
+  }
+  assert_eq(set.len(), 4)
+  assert_true(set.is_match("error 503"))
+  assert_eq(set.matching_patterns("error 503"), [1, 3])
+  assert_eq(set.matching_patterns("INFO ready"), [0])
+  assert_eq(set.matching_patterns("debug"), [])
+}
+
+test "regex set compilation identifies the invalid pattern" {
+  match RegexSet::compile(["ready", "a|"]) {
+    Ok(_) => assert_true(false)
+    Err(error) => {
+      assert_eq(error.pattern_index, 1)
+      assert_true(error.to_string().contains("pattern 1"))
+    }
+  }
 }

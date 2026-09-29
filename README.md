@@ -10,14 +10,19 @@ A small regular-expression engine written in pure MoonBit. It parses a pattern i
 | `.` | Any single character |
 | `ab` | Concatenation |
 | `a|b` | Alternation |
-| `(ab)` | Grouping |
+| `(ab)` | Numbered capture group |
 | `a*`, `a+`, `a?` | Zero-or-more, one-or-more, optional |
 | `[abc]`, `[a-z]`, `[^0-9]` | Character class, inclusive range, negated class |
 | `a{2}`, `a{2,}`, `a{2,4}` | Exact, lower-bounded, bounded repetition |
 | `^`, `$` | Beginning and end of the input |
 | `\.` | Escaped literal metacharacter |
+| `\d`, `\w`, `\s` | ASCII digit, word, and whitespace categories |
+| `\D`, `\W`, `\S` | Complements of the shorthand categories |
+| `\p{L}`, `\p{Lu}`, `\p{N}` | Unicode general categories and category groups |
+| `\P{M}` | Complement of a Unicode general category |
+| `\n`, `\r`, `\t` | Line-feed, carriage-return, and tab |
 
-Inside a class, `\` escapes the next character; escape `]`, `-`, `^`, or `\` to use them literally. A `-` at the end of a class is literal. Empty classes and descending ranges are errors. Repetition counts are limited to 1000 and the upper bound must be at least the lower bound. Capture groups and backreferences are not implemented.
+Inside a class, `\` escapes the next character; escape `]`, `-`, `^`, or `\` to use them literally. Shorthand categories and Unicode properties can also appear in classes, but cannot be range endpoints. A `-` at the end of a class is literal. Empty classes and descending ranges are errors. Repetition counts are limited to 1000 and the upper bound must be at least the lower bound. Captures are numbered by opening-parenthesis order. Backreferences are not implemented.
 
 ## Use
 
@@ -30,9 +35,9 @@ match @arachne.Regex::compile("^(ab|cd)+$") {
 }
 ```
 
-The public API provides `Regex::compile`, `Regex::full_match`, `Regex::find`, `Regex::find_all`, `Regex::replace_first`, `Regex::replace_all`, `Regex::replace_n`, `Regex::split`, `Regex::splitn`, `Regex::contains`, and `Regex::pattern`. `Match::text` extracts a match span, and `parse` is public when callers need the syntax tree directly. `find_all` and replacement use non-overlapping leftmost-longest matches. Empty matches advance by one input character; `split` retains empty fields at boundaries. Replacement strings support `$0` for the whole match and `$$` for a literal dollar sign; numbered captures are planned alongside capture-group support.
+The public API provides `Regex::compile`, `Regex::full_match`, `Regex::find`, `Regex::find_all`, `Regex::captures`, `Regex::replace_first`, `Regex::replace_all`, `Regex::replace_n`, `Regex::split`, `Regex::splitn`, `Regex::contains`, and `Regex::pattern`. `RegexSet` compiles multiple rules and returns all matching rule indexes, useful for categorizing log lines or routing requests. `Match::text` extracts a match span, `Captures::group` returns a numbered capture, and `Captures::text` extracts its text. Group zero is the complete match; optional groups that did not participate return `None`. Repeated groups report their last participating iteration. `parse` is public when callers need the syntax tree directly. `find_all` and replacement use non-overlapping leftmost-longest matches. Empty matches advance by one input character; `split` retains empty fields at boundaries. Replacement strings support `$0` through `$n`, `${n}`, and `$$`.
 
-`find` returns the leftmost match and, at that start position, the longest possible end position. Empty matches are valid. `^` and `$` assert the boundaries of the entire input, including when searching with `find`; escape them to match literal characters. Matching advances over MoonBit string code units, as in the first milestone. Character classes and ranges compare those code units; they do not implement Unicode properties or case folding.
+`find` returns the leftmost match and, at that start position, the longest possible end position. Empty matches are valid. `^` and `$` assert the boundaries of the entire input, including when searching with `find`; escape them to match literal characters. Parsing and matching advance by Unicode scalar value, so a supplementary character such as an emoji is one regex atom. Public match offsets and substring extraction use MoonBit's UTF-16 code-unit offsets. `\p{...}` supports all Unicode General_Category abbreviations, their documented long names, and the aggregate groups `L`, `M`, `N`, `P`, `S`, `Z`, and `C`; `\P{...}` matches their complement. The generated tables target Unicode 17.0. `\w` and related shorthand categories remain ASCII-defined. Case folding is not implemented.
 
 ## Development
 
@@ -43,6 +48,8 @@ moon check
 ```
 
 Run the suite with `moon test`. The source is kept at the package root so the parser, AST, and NFA engine can be read together. See [DESIGN.md](DESIGN.md) for the execution model and its limits.
+
+The Unicode category tables in [unicode_data.mbt](unicode_data.mbt) are generated from Unicode 17.0 `UnicodeData.txt`; regeneration steps are in [tools/README.md](tools/README.md). The upstream data license is included in [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt).
 
 ## License
 

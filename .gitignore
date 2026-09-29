@@ -1,3 +1,4 @@
 target/
 .moon/
 _build/
+/UnicodeData.txt

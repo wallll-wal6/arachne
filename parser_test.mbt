@@ -29,14 +29,14 @@ test "alternation and precedence" {
 }
 
 test "groups shape precedence" {
-  assert_eq(expect("a(b|c)"), Concat(Lit('a'), Alt(Lit('b'), Lit('c'))))
+  assert_eq(expect("a(b|c)"), Concat(Lit('a'), Capture(1, Alt(Lit('b'), Lit('c')))))
 }
 
 test "quantifiers" {
   assert_eq(expect("a*"), Star(Lit('a')))
   assert_eq(expect("a+"), Plus(Lit('a')))
   assert_eq(expect("a?"), Optional(Lit('a')))
-  assert_eq(expect("(a*)*"), Star(Star(Lit('a'))))
+  assert_eq(expect("(a*)*"), Star(Capture(1, Star(Lit('a')))))
 }
 
 test "dot and escapes" {
@@ -71,6 +71,30 @@ test "errors carry the offending position" {
   }
 }
 
+test "common character shorthands and control escapes" {
+  assert_eq(expect("\\d"), Class([Builtin(Digit, false)], false))
+  assert_eq(expect("\\W"), Class([Builtin(Word, true)], false))
+  assert_eq(expect("[a-z\\d]"), Class([Range('a', 'z'), Builtin(Digit, false)], false))
+  assert_eq(expect("\\n\\t\\r"), Concat(Concat(Lit('\n'), Lit('\t')), Lit('\r')))
+  assert_eq(expect("[\\s\\D]"), Class([Builtin(Whitespace, false), Builtin(Digit, true)], false))
+  assert_eq(expect("\\n").to_pattern(), "\\n")
+  assert_true(is_err("[\\d-a]"))
+}
+
+test "parser advances over Unicode scalar values" {
+  assert_eq(expect("🐈"), Lit('🐈'))
+  assert_eq(expect("a🐈b"), Concat(Concat(Lit('a'), Lit('🐈')), Lit('b')))
+}
+
+test "Unicode general category properties parse and normalize aliases" {
+  assert_eq(expect("\\p{L}"), Class([Property("L", false)], false))
+  assert_eq(expect("\\P{Decimal_Number}"), Class([Property("Nd", true)], false))
+  assert_eq(expect("[\\p{Letter}\\p{N}]").to_pattern(), "[\\p{L}\\p{N}]")
+  assert_true(is_err("\\p{Bogus}"))
+  assert_true(is_err("\\pL"))
+  assert_true(is_err("[\\p{L}-z]"))
+}
+
 test "character classes and ranges parse" {
   assert_eq(expect("[a-cx]"), Class([Range('a', 'c'), Single('x')], false))
   assert_eq(expect("[^0-9]"), Class([Range('0', '9')], true))
@@ -80,7 +104,10 @@ test "character classes and ranges parse" {
 
 test "counted repetitions parse" {
   assert_eq(expect("a{2}"), Count(Lit('a'), 2, 2))
-  assert_eq(expect("(ab){1,3}"), Count(Concat(Lit('a'), Lit('b')), 1, 3))
+  assert_eq(
+    expect("(ab){1,3}"),
+    Count(Capture(1, Concat(Lit('a'), Lit('b'))), 1, 3),
+  )
   assert_eq(expect("a{2,}"), Count(Lit('a'), 2, -1))
   assert_eq(expect("a{0}"), Count(Lit('a'), 0, 0))
   assert_eq(expect("a{2,}").to_pattern(), "a{2,}")
