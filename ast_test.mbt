@@ -3,7 +3,7 @@
 
 ///|
 fn render(pattern : String) -> String raise Error {
-  match parse(pattern) {
+  match @arachne.parse(pattern) {
     Ok(n) => n.to_pattern()
     Err(_) => {
       assert_true(false)

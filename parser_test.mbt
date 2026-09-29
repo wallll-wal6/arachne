@@ -2,19 +2,19 @@
 // Licensed under the Apache License, Version 2.0.
 
 ///|
-fn expect(pattern : String) -> Node raise Error {
-  match parse(pattern) {
+fn expect(pattern : String) -> @arachne.Node raise Error {
+  match @arachne.parse(pattern) {
     Ok(n) => n
     Err(_) => {
       assert_true(false)
-      Empty
+      @arachne.Empty
     }
   }
 }
 
 ///|
 fn is_err(pattern : String) -> Bool {
-  match parse(pattern) {
+  match @arachne.parse(pattern) {
     Ok(_) => false
     Err(_) => true
   }
@@ -22,42 +22,54 @@ fn is_err(pattern : String) -> Bool {
 
 ///|
 test "literals and concatenation" {
-  assert_eq(expect("a"), Lit('a'))
-  assert_eq(expect("ab"), Concat(Lit('a'), Lit('b')))
+  assert_eq(expect("a"), @arachne.Lit('a'))
+  assert_eq(expect("ab"), @arachne.Concat(@arachne.Lit('a'), @arachne.Lit('b')))
 }
 
 ///|
 test "alternation and precedence" {
-  assert_eq(expect("a|b"), Alt(Lit('a'), Lit('b')))
-  assert_eq(expect("ab|c"), Alt(Concat(Lit('a'), Lit('b')), Lit('c')))
+  assert_eq(expect("a|b"), @arachne.Alt(@arachne.Lit('a'), @arachne.Lit('b')))
+  assert_eq(
+    expect("ab|c"),
+    @arachne.Alt(
+      @arachne.Concat(@arachne.Lit('a'), @arachne.Lit('b')),
+      @arachne.Lit('c'),
+    ),
+  )
 }
 
 ///|
 test "groups shape precedence" {
   assert_eq(
     expect("a(b|c)"),
-    Concat(Lit('a'), Capture(1, Alt(Lit('b'), Lit('c')))),
+    @arachne.Concat(
+      @arachne.Lit('a'),
+      @arachne.Capture(1, @arachne.Alt(@arachne.Lit('b'), @arachne.Lit('c'))),
+    ),
   )
 }
 
 ///|
 test "quantifiers" {
-  assert_eq(expect("a*"), Star(Lit('a')))
-  assert_eq(expect("a+"), Plus(Lit('a')))
-  assert_eq(expect("a?"), Optional(Lit('a')))
-  assert_eq(expect("(a*)*"), Star(Capture(1, Star(Lit('a')))))
+  assert_eq(expect("a*"), @arachne.Star(@arachne.Lit('a')))
+  assert_eq(expect("a+"), @arachne.Plus(@arachne.Lit('a')))
+  assert_eq(expect("a?"), @arachne.Optional(@arachne.Lit('a')))
+  assert_eq(
+    expect("(a*)*"),
+    @arachne.Star(@arachne.Capture(1, @arachne.Star(@arachne.Lit('a')))),
+  )
 }
 
 ///|
 test "dot and escapes" {
-  assert_eq(expect("."), Dot)
-  assert_eq(expect("\\."), Lit('.'))
-  assert_eq(expect("\\\\"), Lit('\\'))
+  assert_eq(expect("."), @arachne.Dot)
+  assert_eq(expect("\\."), @arachne.Lit('.'))
+  assert_eq(expect("\\\\"), @arachne.Lit('\\'))
 }
 
 ///|
 test "empty pattern is the Empty node" {
-  assert_eq(expect(""), Empty)
+  assert_eq(expect(""), @arachne.Empty)
 }
 
 ///|
@@ -71,19 +83,19 @@ test "malformed patterns are rejected" {
 
 ///|
 test "empty groups and alternation branches are valid" {
-  assert_eq(expect("()"), Capture(1, Empty))
-  assert_eq(expect("|a"), Alt(Empty, Lit('a')))
-  assert_eq(expect("a|"), Alt(Lit('a'), Empty))
-  assert_eq(expect("|"), Alt(Empty, Empty))
+  assert_eq(expect("()"), @arachne.Capture(1, @arachne.Empty))
+  assert_eq(expect("|a"), @arachne.Alt(@arachne.Empty, @arachne.Lit('a')))
+  assert_eq(expect("a|"), @arachne.Alt(@arachne.Lit('a'), @arachne.Empty))
+  assert_eq(expect("|"), @arachne.Alt(@arachne.Empty, @arachne.Empty))
 }
 
 ///|
 test "errors carry the offending position" {
-  match parse("a)") {
+  match @arachne.parse("a)") {
     Err(e) => assert_eq(e.pos, 1)
     Ok(_) => assert_true(false)
   }
-  match parse("a{2") {
+  match @arachne.parse("a{2") {
     Err(e) => assert_eq(e.pos, 3)
     Ok(_) => assert_true(false)
   }
@@ -91,21 +103,39 @@ test "errors carry the offending position" {
 
 ///|
 test "common character shorthands and control escapes" {
-  assert_eq(expect("\\d"), Class([Builtin(Digit, false)], false))
-  assert_eq(expect("\\W"), Class([Builtin(Word, true)], false))
+  assert_eq(
+    expect("\\d"),
+    @arachne.Class([@arachne.Builtin(@arachne.Digit, false)], false),
+  )
+  assert_eq(
+    expect("\\W"),
+    @arachne.Class([@arachne.Builtin(@arachne.Word, true)], false),
+  )
   assert_eq(
     expect("[a-z\\d]"),
-    Class([Range('a', 'z'), Builtin(Digit, false)], false),
+    @arachne.Class(
+      [@arachne.Range('a', 'z'), @arachne.Builtin(@arachne.Digit, false)],
+      false,
+    ),
   )
   assert_eq(
     expect("\\n\\t\\r"),
-    Concat(Concat(Lit('\n'), Lit('\t')), Lit('\r')),
+    @arachne.Concat(
+      @arachne.Concat(@arachne.Lit('\n'), @arachne.Lit('\t')),
+      @arachne.Lit('\r'),
+    ),
   )
-  assert_eq(expect("\\v"), Lit((0x0B).to_char().unwrap()))
+  assert_eq(expect("\\v"), @arachne.Lit((0x0B).to_char().unwrap()))
   assert_eq(expect("[\\n\\v]").to_pattern(), "[\\n\\v]")
   assert_eq(
     expect("[\\s\\D]"),
-    Class([Builtin(Whitespace, false), Builtin(Digit, true)], false),
+    @arachne.Class(
+      [
+        @arachne.Builtin(@arachne.Whitespace, false),
+        @arachne.Builtin(@arachne.Digit, true),
+      ],
+      false,
+    ),
   )
   assert_eq(expect("\\n").to_pattern(), "\\n")
   assert_true(is_err("[\\d-a]"))
@@ -113,22 +143,37 @@ test "common character shorthands and control escapes" {
 
 ///|
 test "word boundary assertions and class backspace escape parse" {
-  assert_eq(expect("\\b"), WordBoundary)
-  assert_eq(expect("\\B"), NotWordBoundary)
-  assert_eq(expect("[\\b]"), Class([Single((0x08).to_char().unwrap())], false))
+  assert_eq(expect("\\b"), @arachne.WordBoundary)
+  assert_eq(expect("\\B"), @arachne.NotWordBoundary)
+  assert_eq(
+    expect("[\\b]"),
+    @arachne.Class([@arachne.Single((0x08).to_char().unwrap())], false),
+  )
   assert_eq(expect("[\\b]").to_pattern(), "[\\b]")
 }
 
 ///|
 test "parser advances over Unicode scalar values" {
-  assert_eq(expect("🐈"), Lit('🐈'))
-  assert_eq(expect("a🐈b"), Concat(Concat(Lit('a'), Lit('🐈')), Lit('b')))
+  assert_eq(expect("🐈"), @arachne.Lit('🐈'))
+  assert_eq(
+    expect("a🐈b"),
+    @arachne.Concat(
+      @arachne.Concat(@arachne.Lit('a'), @arachne.Lit('🐈')),
+      @arachne.Lit('b'),
+    ),
+  )
 }
 
 ///|
-test "Unicode general category properties parse and normalize aliases" {
-  assert_eq(expect("\\p{L}"), Class([Property("L", false)], false))
-  assert_eq(expect("\\P{Decimal_Number}"), Class([Property("Nd", true)], false))
+test "Unicode general category properties and normalize aliases" {
+  assert_eq(
+    expect("\\p{L}"),
+    @arachne.Class([@arachne.Property("L", false)], false),
+  )
+  assert_eq(
+    expect("\\P{Decimal_Number}"),
+    @arachne.Class([@arachne.Property("Nd", true)], false),
+  )
   assert_eq(expect("[\\p{Letter}\\p{N}]").to_pattern(), "[\\p{L}\\p{N}]")
   assert_true(is_err("\\p{Bogus}"))
   assert_true(is_err("\\pL"))
@@ -136,22 +181,32 @@ test "Unicode general category properties parse and normalize aliases" {
 }
 
 ///|
-test "character classes and ranges parse" {
-  assert_eq(expect("[a-cx]"), Class([Range('a', 'c'), Single('x')], false))
-  assert_eq(expect("[^0-9]"), Class([Range('0', '9')], true))
-  assert_eq(expect("[\\-\\]]"), Class([Single('-'), Single(']')], false))
+test "character classes and ranges" {
+  assert_eq(
+    expect("[a-cx]"),
+    @arachne.Class([@arachne.Range('a', 'c'), @arachne.Single('x')], false),
+  )
+  assert_eq(expect("[^0-9]"), @arachne.Class([@arachne.Range('0', '9')], true))
+  assert_eq(
+    expect("[\\-\\]]"),
+    @arachne.Class([@arachne.Single('-'), @arachne.Single(']')], false),
+  )
   assert_eq(expect("[a-cx]").to_pattern(), "[a-cx]")
 }
 
 ///|
-test "counted repetitions parse" {
-  assert_eq(expect("a{2}"), Count(Lit('a'), 2, 2))
+test "counted repetitions" {
+  assert_eq(expect("a{2}"), @arachne.Count(@arachne.Lit('a'), 2, 2))
   assert_eq(
     expect("(ab){1,3}"),
-    Count(Capture(1, Concat(Lit('a'), Lit('b'))), 1, 3),
+    @arachne.Count(
+      @arachne.Capture(1, @arachne.Concat(@arachne.Lit('a'), @arachne.Lit('b'))),
+      1,
+      3,
+    ),
   )
-  assert_eq(expect("a{2,}"), Count(Lit('a'), 2, -1))
-  assert_eq(expect("a{0}"), Count(Lit('a'), 0, 0))
+  assert_eq(expect("a{2,}"), @arachne.Count(@arachne.Lit('a'), 2, -1))
+  assert_eq(expect("a{0}"), @arachne.Count(@arachne.Lit('a'), 0, 0))
   assert_eq(expect("a{2,}").to_pattern(), "a{2,}")
 }
 
@@ -171,7 +226,7 @@ test "malformed classes and counts are rejected" {
 test "count parsing rejects integers before they can overflow" {
   assert_true(is_err("a{999999999999999999999999999999999999999999999999}"))
   assert_true(is_err("a{1001}"))
-  assert_eq(expect("a{1000}"), Count(Lit('a'), 1000, 1000))
+  assert_eq(expect("a{1000}"), @arachne.Count(@arachne.Lit('a'), 1000, 1000))
 }
 
 ///|

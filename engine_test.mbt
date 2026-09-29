@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 ///|
-fn regex(pattern : String) -> Regex {
-  match Regex::compile(pattern) {
+fn regex(pattern : String) -> @arachne.Regex {
+  match @arachne.Regex::compile(pattern) {
     Ok(r) => r
     Err(_) => abort("unexpected compile failure")
   }
@@ -333,7 +333,7 @@ test "replacement expands numeric captures and leaves missing captures empty" {
 ///|
 test "regex sets report every matching rule by stable index" {
   let set = match
-    RegexSet::compile(["^INFO", "error", "warn", "error [0-9]+"]) {
+    @arachne.RegexSet::compile(["^INFO", "error", "warn", "error [0-9]+"]) {
     Ok(set) => set
     Err(_) => abort("valid patterns should compile")
   }
@@ -346,7 +346,7 @@ test "regex sets report every matching rule by stable index" {
 
 ///|
 test "regex set compilation identifies the invalid pattern" {
-  match RegexSet::compile(["ready", "a{2"]) {
+  match @arachne.RegexSet::compile(["ready", "a{2"]) {
     Ok(_) => assert_true(false)
     Err(error) => {
       assert_eq(error.pattern_index, 1)
@@ -361,7 +361,7 @@ test "regex sets enforce pattern and aggregate state limits" {
   for _ in 0..<1025 {
     too_many_patterns.push("")
   }
-  match RegexSet::compile(too_many_patterns) {
+  match @arachne.RegexSet::compile(too_many_patterns) {
     Ok(_) => assert_true(false)
     Err(error) => {
       assert_eq(error.pattern_index, 1024)
@@ -373,7 +373,7 @@ test "regex sets enforce pattern and aggregate state limits" {
   for _ in 0..<66 {
     too_many_states.push("a{1000}")
   }
-  match RegexSet::compile(too_many_states) {
+  match @arachne.RegexSet::compile(too_many_states) {
     Ok(_) => assert_true(false)
     Err(error) => {
       assert_eq(error.pattern_index, 65)
@@ -384,7 +384,7 @@ test "regex sets enforce pattern and aggregate state limits" {
 
 ///|
 test "compile rejects nested repetitions that exceed the NFA budget" {
-  match Regex::compile("(a{1000}){1000}") {
+  match @arachne.Regex::compile("(a{1000}){1000}") {
     Ok(_) => assert_true(false)
     Err(error) => assert_true(error.to_string().contains("65536 NFA states"))
   }
