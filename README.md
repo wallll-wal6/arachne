@@ -30,7 +30,7 @@ match @arachne.Regex::compile("^(ab|cd)+$") {
 }
 ```
 
-The public API provides `Regex::compile`, `Regex::full_match`, `Regex::find`, `Regex::contains`, and `Regex::pattern`. `parse` is also public when callers need the syntax tree directly.
+The public API provides `Regex::compile`, `Regex::full_match`, `Regex::find`, `Regex::find_all`, `Regex::replace_first`, `Regex::replace_all`, `Regex::replace_n`, `Regex::split`, `Regex::splitn`, `Regex::contains`, and `Regex::pattern`. `Match::text` extracts a match span, and `parse` is public when callers need the syntax tree directly. `find_all` and replacement use non-overlapping leftmost-longest matches. Empty matches advance by one input character; `split` retains empty fields at boundaries. Replacement strings support `$0` for the whole match and `$$` for a literal dollar sign; numbered captures are planned alongside capture-group support.
 
 `find` returns the leftmost match and, at that start position, the longest possible end position. Empty matches are valid. `^` and `$` assert the boundaries of the entire input, including when searching with `find`; escape them to match literal characters. Matching advances over MoonBit string code units, as in the first milestone. Character classes and ranges compare those code units; they do not implement Unicode properties or case folding.
 

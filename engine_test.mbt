@@ -155,3 +155,46 @@ test "DFA cache handles end assertions at distinct boundaries" {
   assert_eq(regex("a*$").find("baaa"), Some({ start: 1, end: 4, }))
   assert_eq(regex("(a?)*b$").find("xaab"), Some({ start: 1, end: 4, }))
 }
+
+test "find_all returns non-overlapping leftmost matches" {
+  assert_eq(
+    regex("a+").find_all("baaacaa"),
+    [{ start: 1, end: 4, }, { start: 5, end: 7, }],
+  )
+  assert_eq(
+    regex("").find_all("ab"),
+    [{ start: 0, end: 0, }, { start: 1, end: 1, }, { start: 2, end: 2, }],
+  )
+  assert_eq(regex("z").find_all("abc"), [])
+}
+
+test "matches can return their text" {
+  match regex("[0-9]+").find("room 42") {
+    Some(found) => assert_eq(found.text("room 42"), "42")
+    None => assert_true(false)
+  }
+}
+
+test "replacement handles the full match and escaped dollar" {
+  let digits = regex("[0-9]+")
+  assert_eq(digits.replace_all("room 12 and 4", "#$0"), "room #12 and #4")
+  assert_eq(digits.replace_first("room 12 and 4", "$$0"), "room $0 and 4")
+  assert_eq(digits.replace_n("a1b2", "x", 1), "axb2")
+  assert_eq(digits.replace_n("a1b2", "x", 0), "a1b2")
+  assert_eq(regex("z").replace_all("abc", "x"), "abc")
+}
+
+test "empty-pattern replacement visits each boundary once" {
+  assert_eq(regex("").replace_all("ab", "x"), "xaxbx")
+}
+
+test "split retains empty fields and respects the piece limit" {
+  let comma = regex(",")
+  assert_eq(comma.split("a,,b,"), ["a", "", "b", ""])
+  assert_eq(comma.splitn("a,,b,", 2), ["a", ",b,"])
+  assert_eq(comma.splitn("a,b", 1), ["a,b"])
+  assert_eq(comma.splitn("a,b", 0), [])
+  assert_eq(regex("z").split("abc"), ["abc"])
+  assert_eq(regex("").split("ab"), ["", "a", "b", ""])
+  assert_eq(regex("").splitn("ab", 2), ["", "ab"])
+}

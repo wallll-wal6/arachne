@@ -59,15 +59,180 @@ pub fn Regex::full_match(self : Regex, text : String) -> Bool {
 /// Finds the leftmost, longest match anywhere in text.
 pub fn Regex::find(self : Regex, text : String) -> Match? {
   let cache : Array[DfaEdge] = []
-  let mut start = 0
-  while start <= text.length() {
-    match match_end(self.nfa, text, start, cache) {
-      Some(end) => return Some({ start, end, })
-      None => ()
+  find_from(self.nfa, text, 0, cache)
+}
+
+///|
+/// Finds non-overlapping matches from left to right. Empty matches advance by
+/// one input character, so patterns such as the empty expression terminate.
+pub fn Regex::find_all(self : Regex, text : String) -> Array[Match] {
+  let cache : Array[DfaEdge] = []
+  let matches : Array[Match] = []
+  let mut from = 0
+  let mut done = false
+  while !done {
+    match find_from(self.nfa, text, from, cache) {
+      Some(found) => {
+        matches.push(found)
+        if found.end > found.start {
+          from = found.end
+        } else if found.end < text.length() {
+          from = found.end + 1
+        } else {
+          done = true
+        }
+      }
+      None => done = true
     }
-    start = start + 1
+  }
+  matches
+}
+
+///|
+/// Returns the text covered by this match, using the same character offsets
+/// as `find` and `find_all`.
+pub fn Match::text(self : Match, text : String) -> String {
+  text[self.start:self.end].to_owned()
+}
+
+///|
+/// Replaces the first match. `$0` inserts the entire match and `$$` inserts a
+/// literal dollar sign. Until capture groups are added, other `$n` forms stay
+/// literal.
+pub fn Regex::replace_first(self : Regex, text : String, replacement : String) -> String {
+  self.replace_n(text, replacement, 1)
+}
+
+///|
+/// Replaces every non-overlapping match. Empty matches advance by one
+/// character and include the final input boundary once.
+pub fn Regex::replace_all(self : Regex, text : String, replacement : String) -> String {
+  self.replace_n(text, replacement, -1)
+}
+
+///|
+/// Replaces at most `limit` matches. A negative limit is unbounded; zero
+/// returns the input unchanged.
+pub fn Regex::replace_n(
+  self : Regex,
+  text : String,
+  replacement : String,
+  limit : Int,
+) -> String {
+  if limit == 0 {
+    return text
+  }
+  let builder = StringBuilder()
+  let cache : Array[DfaEdge] = []
+  let mut from = 0
+  let mut copied_until = 0
+  let mut count = 0
+  while true {
+    if limit > 0 && count == limit {
+      break
+    }
+    match find_from(self.nfa, text, from, cache) {
+      Some(found) => {
+        builder.write_substring(text, copied_until, found.start - copied_until)
+        write_replacement(builder, text, replacement, found)
+        copied_until = found.end
+        count = count + 1
+        if found.end > found.start {
+          from = found.end
+        } else if found.end < text.length() {
+          from = found.end + 1
+        } else {
+          break
+        }
+      }
+      None => break
+    }
+  }
+  builder.write_substring(text, copied_until, text.length() - copied_until)
+  builder.to_string()
+}
+
+///|
+/// Splits text around non-overlapping matches, retaining empty pieces at the
+/// beginning and end when the pattern matches there.
+pub fn Regex::split(self : Regex, text : String) -> Array[String] {
+  self.splitn(text, -1)
+}
+
+///|
+/// Splits into at most `limit` pieces. A negative limit is unlimited and zero
+/// returns no pieces.
+pub fn Regex::splitn(self : Regex, text : String, limit : Int) -> Array[String] {
+  let pieces : Array[String] = []
+  if limit == 0 {
+    return pieces
+  }
+  let cache : Array[DfaEdge] = []
+  let mut from = 0
+  let mut copied_until = 0
+  let mut done = false
+  while !done && (limit < 0 || pieces.length() < limit - 1) {
+    match find_from(self.nfa, text, from, cache) {
+      Some(found) => {
+        pieces.push(text[copied_until:found.start].to_owned())
+        copied_until = found.end
+        if found.end > found.start {
+          from = found.end
+        } else if found.end < text.length() {
+          from = found.end + 1
+        } else {
+          done = true
+        }
+      }
+      None => done = true
+    }
+  }
+  pieces.push(text[copied_until:text.length()].to_owned())
+  pieces
+}
+
+///|
+fn find_from(nfa : Nfa, text : String, from : Int, cache : Array[DfaEdge]) -> Match? {
+  let mut start = from
+  while start <= text.length() {
+    match match_end(nfa, text, start, cache) {
+      Some(end) => return Some({ start, end, })
+      None => start = start + 1
+    }
   }
   None
+}
+
+///|
+fn write_replacement(
+  builder : StringBuilder,
+  text : String,
+  replacement : String,
+  found : Match,
+) -> Unit {
+  let chars = replacement.to_array()
+  let mut pos = 0
+  while pos < chars.length() {
+    if chars[pos] == '$' && pos + 1 < chars.length() {
+      if chars[pos + 1] == '$' {
+        builder.write_char('$')
+        pos = pos + 2
+      } else if chars[pos + 1] == '0' {
+        builder.write_substring(text, found.start, found.end - found.start)
+        pos = pos + 2
+      } else if chars[pos + 1] == '{' && pos + 3 < chars.length() &&
+                chars[pos + 2] == '0' && chars[pos + 3] == '}' {
+        builder.write_substring(text, found.start, found.end - found.start)
+        pos = pos + 4
+      } else {
+        builder.write_char('$')
+        pos = pos + 1
+      }
+    } else {
+      builder.write_char(chars[pos])
+      pos = pos + 1
+    }
+  }
 }
 
 ///|
