@@ -6,8 +6,9 @@
 /// Grammar, from loosest to tightest precedence:
 ///   alternation   := concatenation ( '|' concatenation )*
 ///   concatenation := repetition+
-///   repetition    := atom ( '*' | '+' | '?' )?
-///   atom          := '.' | '^' | '$' | '\' <any> | literal | '(' alternation ')'
+///   repetition    := atom ( '*' | '+' | '?' | count )?
+///   count         := '{' digits ( ',' digits? )? '}'
+///   atom          := '.' | '^' | '$' | class | '\' <any> | literal | '(' alternation ')'
 ///
 /// The grammar is small enough that no separate lexer is needed; the parser
 /// reads code units straight from the pattern string.
@@ -112,9 +113,106 @@ fn Parser::parse_repetition(self : Parser) -> Result[Node, RegexError] {
   } else if c == '?'.to_int() {
     self.advance()
     Ok(Optional(atom))
+  } else if c == '{'.to_int() && self.pos + 1 < self.src.length() &&
+            self.src[self.pos + 1] >= '0' && self.src[self.pos + 1] <= '9' {
+    self.parse_count(atom)
   } else {
     Ok(atom)
   }
+}
+
+/// Counts are capped to keep Thompson expansion bounded.
+fn Parser::parse_number(self : Parser) -> Result[Int, RegexError] {
+  let mut value = 0
+  let start = self.pos
+  while self.peek() >= '0'.to_int() && self.peek() <= '9'.to_int() {
+    value = value * 10 + self.peek() - '0'.to_int()
+    if value > 1000 {
+      return Err(RegexError::new(start, "repetition count exceeds 1000"))
+    }
+    self.advance()
+  }
+  if self.pos == start {
+    Err(RegexError::new(start, "expected repetition count"))
+  } else {
+    Ok(value)
+  }
+}
+
+fn Parser::parse_count(self : Parser, atom : Node) -> Result[Node, RegexError] {
+  self.advance()
+  let min = match self.parse_number() {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut max = min
+  if self.peek() == ','.to_int() {
+    self.advance()
+    if self.peek() == '}'.to_int() {
+      max = -1
+    } else {
+      max = match self.parse_number() {
+        Ok(n) => n
+        Err(e) => return Err(e)
+      }
+    }
+  }
+  if self.peek() != '}'.to_int() {
+    return Err(RegexError::new(self.pos, "unclosed repetition"))
+  }
+  self.advance()
+  if max >= 0 && max < min {
+    Err(RegexError::new(self.pos, "repetition upper bound is below lower bound"))
+  } else {
+    Ok(Count(atom, min, max))
+  }
+}
+
+fn Parser::class_atom(self : Parser) -> Result[Char, RegexError] {
+  if self.peek() == '\\'.to_int() {
+    self.advance()
+    if self.peek() < 0 {
+      return Err(RegexError::new(self.pos, "trailing backslash in class"))
+    }
+  }
+  let c = int_to_char(self.peek())
+  self.advance()
+  Ok(c)
+}
+
+fn Parser::parse_class(self : Parser) -> Result[Node, RegexError] {
+  self.advance()
+  let negated = self.peek() == '^'.to_int()
+  if negated { self.advance() }
+  let items : Array[ClassItem] = []
+  while self.peek() >= 0 && self.peek() != ']'.to_int() {
+    let first = match self.class_atom() {
+      Ok(c) => c
+      Err(e) => return Err(e)
+    }
+    if self.peek() == '-'.to_int() && self.pos + 1 < self.src.length() &&
+       self.src[self.pos + 1] != ']' {
+      self.advance()
+      let last = match self.class_atom() {
+        Ok(c) => c
+        Err(e) => return Err(e)
+      }
+      if first.to_int() > last.to_int() {
+        return Err(RegexError::new(self.pos, "descending character range"))
+      }
+      items.push(Range(first, last))
+    } else {
+      items.push(Single(first))
+    }
+  }
+  if self.peek() != ']'.to_int() {
+    return Err(RegexError::new(self.pos, "unclosed character class"))
+  }
+  if items.length() == 0 {
+    return Err(RegexError::new(self.pos, "empty character class"))
+  }
+  self.advance()
+  Ok(Class(items, negated))
 }
 
 fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
@@ -125,6 +223,9 @@ fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
   if c == '.'.to_int() {
     self.advance()
     return Ok(Dot)
+  }
+  if c == '['.to_int() {
+    return self.parse_class()
   }
   if c == '^'.to_int() {
     self.advance()

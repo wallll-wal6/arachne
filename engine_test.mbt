@@ -131,3 +131,27 @@ test "many overlapping optional paths share active states" {
   assert_true(r.full_match("aaaaaaaaaaaaaaaaaaaa"))
   assert_true(!r.full_match("aaaaaaaaaaaaaaaaaaa"))
 }
+
+test "classes, negation, ranges, and literal punctuation" {
+  assert_true(regex("[a-cx]+").full_match("abxc"))
+  assert_true(!regex("[a-cx]+").full_match("abyd"))
+  assert_true(regex("[^0-9]{2}").full_match("ab"))
+  assert_true(!regex("[^0-9]{2}").full_match("a2"))
+  assert_true(regex("[\\-\\]]+").full_match("-]-"))
+  assert_eq(regex("[0-9]+").find("ab12cd"), Some({ start: 2, end: 4, }))
+}
+
+test "counted repetitions and anchors" {
+  assert_true(regex("^(ab){2,3}$").full_match("abab"))
+  assert_true(regex("^(ab){2,3}$").full_match("ababab"))
+  assert_true(!regex("^(ab){2,3}$").full_match("ab"))
+  assert_true(!regex("^(ab){2,3}$").full_match("abababab"))
+  assert_true(regex("a{0}").full_match(""))
+  assert_true(regex("a{2,}").full_match("aaaa"))
+  assert_eq(regex("a{1,3}").find("aaaa"), Some({ start: 0, end: 3, }))
+}
+
+test "DFA cache handles end assertions at distinct boundaries" {
+  assert_eq(regex("a*$").find("baaa"), Some({ start: 1, end: 4, }))
+  assert_eq(regex("(a?)*b$").find("xaab"), Some({ start: 1, end: 4, }))
+}
