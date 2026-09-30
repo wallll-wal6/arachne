@@ -45,7 +45,10 @@ pub fn ClassItem::to_repr(Self) -> @debug.Repr
 pub struct CompileLimits {
   // private fields
 } derive(Eq, @debug.Debug)
+pub fn CompileLimits::equal(Self, Self) -> Bool
+pub fn CompileLimits::not_equal(Self, Self) -> Bool
 pub fn CompileLimits::standard() -> Self
+pub fn CompileLimits::to_repr(Self) -> @debug.Repr
 pub fn CompileLimits::with_max_capture_groups(Self, Int) -> Self
 pub fn CompileLimits::with_max_nesting_depth(Self, Int) -> Self
 pub fn CompileLimits::with_max_nfa_states(Self, Int) -> Self

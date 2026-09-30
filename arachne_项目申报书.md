@@ -28,6 +28,12 @@ Arachne 的窄定位是把 MoonBit `String` 的 Unicode 标量扫描、UTF-16 �
 
 因此，Arachne 面向需要把 Unicode 字符串匹配语义与应用级编译预算一起配置的 MoonBit 程序，不宣称取代 MoonBit 内建正则能力、`moonbitlang/regexp` 或其他成熟实现。比较细节和适用边界见 [docs/positioning.md](docs/positioning.md)。
 
+### 对已有相似项目的评估与独立建设理由
+
+本项目与 MoonBit 生态中的正则引擎存在真实功能重叠，尤其是已发布并持续更新的 [`walkzzz/re-mbt`](https://mooncakes.io/docs/walkzzz/re-mbt)；本申报不将其描述为“生态空白”。该项目明确以移植 OCaml `re` 为目标，提供六种语法前端，并以 `Bytes` 表示模式、输入及捕获结果。Arachne 若直接扩展该项目，需要改变其字节及 OCaml 兼容契约，或在原 API 外增加另一套输入、偏移和资源策略；前一种会影响现有兼容目标，后一种仍需独立定义并验证 MoonBit `String` 语义。
+
+Arachne 因而独立实现一个范围受限的 API：按 Unicode 标量扫描 MoonBit `String`，让公开区间可直接用于 UTF-16 字符串切片，并允许应用把编译预算收紧到租户或配置级别。独立理由是这组输入、索引和预算契约，而不是“正则引擎”这一品类本身，也不是声称某单项功能在生态中独有。官方 [`moonbitlang/regexp`](https://mooncakes.io/docs/moonbitlang/regexp) 也是运行时编译和 Unicode 匹配的现成选择；若其左优先语义及 API 满足需求，应优先采用。该差异和取舍依据已在仓库的[方案对比](docs/positioning.md)中展开。
+
 ## 核心功能范围
 - **当前支持的常用语法与操作符**：支持字面量字符、通配符 `.`（匹配单个 Unicode 标量）、输入起止断言锚点 `^`（输入起始）与 `$`（输入终止）、连接、分支（`|`）、贪婪闭包量词（`*`, `+`, `?`）及受限计数重复（`a{n}`, `a{n,}`, `a{m,n}`，其中 $n \le 1000$）；
 - **字符类与转义控制**：支持正向集合 `[abc]`、范围区间 `[a-z]`、反向集合 `[^0-9]`，支持转义元字符字面量及 `\n`、`\r`、`\t`、`\v` 等转义控制符；

@@ -17,6 +17,12 @@ pub struct CompileLimits {
 } derive(Eq, Debug)
 
 ///|
+pub extend CompileLimits with Eq::{not_equal, equal}
+
+///|
+pub extend CompileLimits with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Returns the documented maximum budgets supported by this implementation.
 pub fn CompileLimits::standard() -> CompileLimits {
   {
