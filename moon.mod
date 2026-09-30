@@ -1,8 +1,10 @@
-name = "arachne"
+name = "wallll-wal6/arachne"
 
 version = "0.1.0"
 
 readme = "README.md"
+
+repository = "https://github.com/wallll-wal6/arachne"
 
 license = "Apache-2.0"
 
