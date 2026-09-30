@@ -62,6 +62,9 @@ pub(all) enum ContractError {
   EmptyCaseId
   InvalidExpectedSpan(String)
 } derive(Eq, @debug.Debug)
+pub fn ContractError::equal(Self, Self) -> Bool
+pub fn ContractError::not_equal(Self, Self) -> Bool
+pub fn ContractError::to_repr(Self) -> @debug.Repr
 
 pub(all) struct EngineAdapter {
   id : String
@@ -74,6 +77,9 @@ pub(all) enum EngineOutcome {
   ExecutionFailed(String)
   Completed(MatchObservation?)
 } derive(Eq, @debug.Debug)
+pub fn EngineOutcome::equal(Self, Self) -> Bool
+pub fn EngineOutcome::not_equal(Self, Self) -> Bool
+pub fn EngineOutcome::to_repr(Self) -> @debug.Repr
 
 pub(all) struct EngineRun {
   case_id : String
@@ -85,6 +91,9 @@ pub(all) enum ExpectedOutcome {
   ExpectedNoMatch
   ExpectedMatch(text~ : String, captures~ : Array[String?])
 } derive(Eq, @debug.Debug)
+pub fn ExpectedOutcome::equal(Self, Self) -> Bool
+pub fn ExpectedOutcome::not_equal(Self, Self) -> Bool
+pub fn ExpectedOutcome::to_repr(Self) -> @debug.Repr
 
 pub(all) enum FindingKind {
   CompileAcceptanceDiff
@@ -95,6 +104,9 @@ pub(all) enum FindingKind {
   CaptureDiff
   ExpectationFailed
 } derive(Eq, @debug.Debug)
+pub fn FindingKind::equal(Self, Self) -> Bool
+pub fn FindingKind::not_equal(Self, Self) -> Bool
+pub fn FindingKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MatchObservation {
   text : String
@@ -102,12 +114,18 @@ pub(all) struct MatchObservation {
   end : Int
   captures : Array[String?]
 } derive(Eq, @debug.Debug)
+pub fn MatchObservation::equal(Self, Self) -> Bool
+pub fn MatchObservation::not_equal(Self, Self) -> Bool
+pub fn MatchObservation::to_repr(Self) -> @debug.Repr
 
 pub(all) enum UnicodeCorpusError {
   UnknownCategory(String)
   InvalidCaseLimit
   NoScalarSamples(String)
 } derive(Eq, @debug.Debug)
+pub fn UnicodeCorpusError::equal(Self, Self) -> Bool
+pub fn UnicodeCorpusError::not_equal(Self, Self) -> Bool
+pub fn UnicodeCorpusError::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

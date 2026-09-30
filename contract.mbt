@@ -33,11 +33,23 @@ pub(all) struct ContractCase {
 }
 
 ///|
+pub extend MatchObservation with Eq::{equal, not_equal}
+
+///|
+pub extend MatchObservation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Optional engine-independent expectation for one contract case.
 pub(all) enum ExpectedOutcome {
   ExpectedNoMatch
   ExpectedMatch(text~ : String, captures~ : Array[String?])
 } derive(Eq, Debug)
+
+///|
+pub extend ExpectedOutcome with Eq::{equal, not_equal}
+
+///|
+pub extend ExpectedOutcome with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Result of running one case against one engine.
@@ -46,6 +58,12 @@ pub(all) enum EngineOutcome {
   ExecutionFailed(String)
   Completed(MatchObservation?)
 } derive(Eq, Debug)
+
+///|
+pub extend EngineOutcome with Eq::{equal, not_equal}
+
+///|
+pub extend EngineOutcome with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// A cross-engine or expectation difference.
@@ -67,6 +85,12 @@ pub(all) enum FindingKind {
   CaptureDiff
   ExpectationFailed
 } derive(Eq, Debug)
+
+///|
+pub extend FindingKind with Eq::{equal, not_equal}
+
+///|
+pub extend FindingKind with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Output rows are stable in case order, then adapter order.
@@ -98,6 +122,12 @@ pub(all) enum ContractError {
   EmptyCaseId
   InvalidExpectedSpan(String)
 } derive(Eq, Debug)
+
+///|
+pub extend ContractError with Eq::{equal, not_equal}
+
+///|
+pub extend ContractError with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Build an adapter around a real regex implementation.

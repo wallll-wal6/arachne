@@ -5954,6 +5954,12 @@ pub(all) enum UnicodeCorpusError {
 } derive(Eq, Debug)
 
 ///|
+pub extend UnicodeCorpusError with Eq::{equal, not_equal}
+
+///|
+pub extend UnicodeCorpusError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Build deterministic positive and adjacent-negative cases from the Unicode
 /// 17.0 category range boundaries. The limit caps the number of cases emitted.
 /// This is a test-corpus oracle, not a Unicode classifier used at runtime.
