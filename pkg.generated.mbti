@@ -8,6 +8,8 @@ import {
 // Values
 pub fn moonbit_regexp_adapter() -> EngineAdapter
 
+pub fn rembt_ascii_perl_adapter() -> EngineAdapter
+
 pub fn run_contracts(Array[ContractCase], Array[EngineAdapter], String) -> Result[CompatibilityReport, ContractError]
 
 pub fn unicode_category_cases(category~ : String, max_cases~ : Int) -> Result[Array[ContractCase], UnicodeCorpusError]

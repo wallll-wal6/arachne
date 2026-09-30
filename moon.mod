@@ -14,4 +14,5 @@ description = "Behavior contract testing across MoonBit regex backends with Unic
 
 import {
   "moonbitlang/regexp@0.3.5",
+  "walkzzz/re-mbt@0.1.0",
 }

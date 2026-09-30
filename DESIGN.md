@@ -16,13 +16,13 @@ An `EngineAdapter` contains a stable ID and a compile function. A successful com
 
 Different engines can have different anchoring, greediness, Unicode, and capture semantics. The adapter must represent what the engine actually did; it must not silently rewrite patterns or normalize away meaningful differences. If a backend cannot provide an offset reliably, the adapter should use a separate contract that does not claim span comparability rather than guess.
 
-The bundled `moonbit_regexp_adapter` is implemented through the official `moonbitlang/regexp` runtime API. Other backends can be wrapped by constructing `EngineAdapter` and `CompiledMatcher` values. Arachne itself does not parse or execute regex syntax.
+The bundled `moonbit_regexp_adapter` calls the official `moonbitlang/regexp` runtime API. The `rembt_ascii_perl_adapter` calls the real `walkzzz/re-mbt` Perl frontend and is intentionally restricted to ASCII patterns and inputs: for ASCII only, the backend's byte offsets equal Arachne's documented string-view code-unit offsets. Non-ASCII values are rejected by this adapter instead of being truncated or misreported. Other backends can be wrapped by constructing `EngineAdapter` and `CompiledMatcher` values. Arachne itself does not parse or execute regex syntax.
 
 ## Findings
 
 For each candidate engine, Arachne reports differences in compile acceptance, execution success, match presence, matched text, whole-match span, and capture values. Optional expected outcomes are checked against every engine independently. Findings identify the case and engine, and a stable text formatter supports build logs.
 
-Matching compile errors or execution errors on both engines are not treated as semantic differences; the suite can still report a failed golden expectation. Error details remain adapter-provided strings. No claim is made that a finite fixture corpus proves equivalence beyond the tested inputs.
+Matching compile errors or execution errors on both engines are not treated as semantic differences; the suite can still report a failed golden expectation. Error details remain adapter-provided strings. The integration suite runs common ASCII contracts through both real engines and includes a backreference case: the official regexp backend accepts and matches it, while re-mbt's Perl frontend rejects it. Arachne reports that as a compile-acceptance difference. This demonstrates a concrete migration/release-audit use case; it does not imply either backend is wrong. No claim is made that a finite fixture corpus proves equivalence beyond the tested inputs.
 
 ## Unicode boundary corpus
 

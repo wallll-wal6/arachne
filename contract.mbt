@@ -396,22 +396,37 @@ fn compare_outcomes(
 ) -> Unit {
   match (baseline, actual) {
     (CompileRejected(_), Completed(_))
-    | (CompileRejected(_), ExecutionFailed(_))
-    | (Completed(_), CompileRejected(_))
+    | (CompileRejected(_), ExecutionFailed(_)) =>
+      push_finding(
+        case_id,
+        engine_id,
+        FindingKind::CompileAcceptanceDiff,
+        "baseline rejected the pattern; candidate compiled it",
+        findings,
+      )
+    (Completed(_), CompileRejected(_))
     | (ExecutionFailed(_), CompileRejected(_)) =>
       push_finding(
         case_id,
         engine_id,
         FindingKind::CompileAcceptanceDiff,
-        "engines disagree on whether the pattern compiles",
+        "baseline compiled the pattern; candidate rejected it",
         findings,
       )
-    (ExecutionFailed(_), Completed(_)) | (Completed(_), ExecutionFailed(_)) =>
+    (ExecutionFailed(_), Completed(_)) =>
       push_finding(
         case_id,
         engine_id,
         FindingKind::ExecutionDiff,
-        "engines disagree on whether execution succeeds",
+        "baseline execution failed; candidate completed",
+        findings,
+      )
+    (Completed(_), ExecutionFailed(_)) =>
+      push_finding(
+        case_id,
+        engine_id,
+        FindingKind::ExecutionDiff,
+        "baseline completed; candidate execution failed",
         findings,
       )
     (Completed(left), Completed(right)) =>

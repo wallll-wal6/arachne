@@ -31,6 +31,97 @@ test "MoonBit regexp adapter preserves match and capture observations" {
 }
 
 ///|
+test "real MoonBit and re-mbt engines satisfy shared ASCII contracts" {
+  let report = match
+    @arachne.run_contracts(
+      [
+        @arachne.ContractCase::expect_match(
+          id="order-reference",
+          pattern="([A-Z]+)-([0-9]+)",
+          input="ORD-2048",
+          text="ORD-2048",
+          captures=[Some("ORD"), Some("2048")],
+        ),
+        @arachne.ContractCase::expect_match(
+          id="optional-unmatched-group",
+          pattern="(cat)?dog",
+          input="dog",
+          text="dog",
+          captures=[None],
+        ),
+        @arachne.ContractCase::expect_match(
+          id="anchored-repetition",
+          pattern="^ab+c$",
+          input="abbbc",
+          text="abbbc",
+          captures=[],
+        ),
+        @arachne.ContractCase::expect_no_match(
+          id="reject-punctuation",
+          pattern="^[a-z]+$",
+          input="alpha-1",
+        ),
+        @arachne.ContractCase::new(
+          id="backreference-support-difference",
+          pattern="^([a-z])\\1$",
+          input="aa",
+        ),
+      ],
+      [@arachne.moonbit_regexp_adapter(), @arachne.rembt_ascii_perl_adapter()],
+      "moonbitlang/regexp",
+    ) {
+    Ok(report) => report
+    Err(_) => abort("the two real ASCII adapters should run")
+  }
+  assert_eq(report.case_count(), 5)
+  assert_eq(report.engine_count(), 2)
+  assert_eq(report.findings.length(), 1)
+  assert_eq(report.findings[0].case_id, "backreference-support-difference")
+  assert_eq(report.findings[0].engine_id, "walkzzz/re-mbt/Perl (ASCII)")
+  assert_eq(
+    report.findings[0].detail,
+    "baseline compiled the pattern; candidate rejected it",
+  )
+  assert_true(
+    report.findings[0].kind == @arachne.FindingKind::CompileAcceptanceDiff,
+  )
+}
+
+///|
+test "re-mbt adapter marks its non-ASCII domain boundary explicitly" {
+  let report = match
+    @arachne.run_contracts(
+      [
+        @arachne.ContractCase::new(
+          id="non-ascii-pattern",
+          pattern="猫",
+          input="猫",
+        ),
+        @arachne.ContractCase::new(
+          id="non-ascii-input",
+          pattern="a",
+          input="猫",
+        ),
+      ],
+      [@arachne.rembt_ascii_perl_adapter()],
+      "walkzzz/re-mbt/Perl (ASCII)",
+    ) {
+    Ok(report) => report
+    Err(_) => abort("the adapter boundary cases should run")
+  }
+  match report.runs[0].outcome {
+    @arachne.EngineOutcome::CompileRejected(message) =>
+      assert_true(message.contains("adapter-domain"))
+    _ => abort("a non-ASCII pattern should be rejected at the adapter boundary")
+  }
+  match report.runs[1].outcome {
+    @arachne.EngineOutcome::ExecutionFailed(message) =>
+      assert_true(message.contains("adapter-domain"))
+    _ => abort("a non-ASCII input should be rejected at the adapter boundary")
+  }
+}
+
+///|
 test "golden contract detects a Unicode match-span regression" {
   let report = match
     @arachne.run_contracts(

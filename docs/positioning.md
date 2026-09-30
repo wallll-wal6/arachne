@@ -21,19 +21,24 @@ The distinction is architectural and testable:
 | Parse a pattern and implement syntax | No; delegated to an adapter | Yes |
 | Execute matching | No; delegated to an adapter | Yes |
 | Publish a caller-facing API for reusable contract cases | Yes | Not documented in its public README/API |
-| Run the same caller-supplied cases through multiple adapters | Yes | Not documented as a public capability |
+| Ship an adapter to call the real `re-mbt` Perl frontend | Yes, with an explicit ASCII-only domain | It supplies the engine |
+| Run the same caller-supplied cases through multiple real adapters | Yes; both bundled adapters are executed in tests | Not documented as a public capability |
 | Compare compile, match, span, and capture observations | Yes | The documented package is the engine being observed |
 | Produce ordered findings for a CI log | Yes | Not documented as a package feature |
-| Generate bounded Unicode boundary inputs | Yes, using the included Unicode 17.0 general-category data | The engine implements its own Unicode behavior |
+| Generate bounded Unicode boundary inputs | Yes; current Unicode corpus is exercised with the official adapter, not the ASCII-only re-mbt adapter | The engine implements its own Unicode behavior |
 
 The `walkzzz/re-mbt` public project describes itself as an OCaml `re` port and
 documents parsing, automata, matching, search, replacement, six syntax
 frontends, and an extensive engine test suite. Those are engine capabilities;
 Arachne does not claim those tests do not exist and does not reimplement those
-facilities. Arachne's distinct API accepts caller-owned behavior contracts and
-provides an adapter boundary for checking more than one engine or version
-against the same cases. See the [re-mbt repository](https://github.com/walkzzz/re-mbt)
-and the [official MoonBit regexp package](https://github.com/moonbitlang/regexp.mbt)
+facilities. Arachne now exercises `re-mbt` directly through a first-party Perl
+adapter as well as the official `moonbitlang/regexp` adapter. The checked-in
+integration contract includes ordinary shared patterns plus a backreference
+case; the real engines disagree on compile acceptance for that case, and
+Arachne reports the difference. This makes the migration-audit value
+demonstrable in code rather than only a proposed extension point. See the
+[re-mbt repository](https://github.com/walkzzz/re-mbt) and the
+[official MoonBit regexp package](https://github.com/moonbitlang/regexp.mbt)
 for the behavior supplied by those engines.
 
 ## What an adapter must do
@@ -54,6 +59,9 @@ that integration or implement a separately documented observation contract.
 ## Scope and current limits
 
 - The bundled adapter targets `moonbitlang/regexp`.
+- The bundled `re-mbt` adapter targets its Perl frontend and accepts ASCII-only
+  patterns and inputs. That restriction follows from the byte-oriented upstream
+  API; non-ASCII offsets are not silently converted or guessed.
 - Other engines or versions are connected by caller-supplied adapters; Arachne
   does not bundle or vendor their matching code.
 - The included Unicode corpus creates a bounded set of boundary-focused

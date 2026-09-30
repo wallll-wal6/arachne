@@ -2,7 +2,7 @@
 
 Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 
-Arachne does not implement a regex syntax, parser, or matching engine. Its first-party adapter calls the official [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt) package. Applications can add adapters for another engine or for a newer engine version without copying either implementation.
+Arachne does not implement a regex syntax, parser, or matching engine. Its first-party adapters call the official [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt) package and the Perl frontend of [`walkzzz/re-mbt`](https://github.com/walkzzz/re-mbt). The re-mbt adapter is deliberately limited to ASCII patterns and inputs because that backend exposes byte-oriented APIs; it refuses non-ASCII data rather than guessing at offset conversion. Applications can add adapters for another engine or a newer engine version without copying either implementation.
 
 This places Arachne above regex libraries: engines parse and match; Arachne
 checks that their observable behavior satisfies shared contracts. The
@@ -61,7 +61,34 @@ match report {
 }
 ```
 
-For cross-engine checks, create another `EngineAdapter`. Its compile callback calls the candidate engine and returns a `CompiledMatcher`; the matcher callback converts that engine's result to `MatchObservation`. Normalize start and end to zero-based MoonBit `StringView` code-unit offsets before comparing. The [adapter contract](DESIGN.md#engine-adapter-contract) describes this boundary.
+For cross-engine checks over ASCII fixtures, use both real adapters directly:
+
+```moonbit
+let report = @arachne.run_contracts(
+  cases,
+  [
+    @arachne.moonbit_regexp_adapter(),
+    @arachne.rembt_ascii_perl_adapter(),
+  ],
+  "moonbitlang/regexp",
+)
+```
+
+The integration suite includes common match/capture contracts and a real
+backreference case that produces a compile-acceptance finding between the two
+engines. Such a finding is a measured behavior difference, not automatically a
+bug: the application owner decides which backend's behavior is required. For
+other engines, create an `EngineAdapter`; the [adapter contract](DESIGN.md#engine-adapter-contract)
+describes this boundary.
+
+The checked-in comparison confirms that both engines pass the common ASCII
+fixtures, while the official engine accepts the backreference fixture and
+re-mbt's Perl frontend rejects it. The finding identifies the candidate and
+both sides of the compile result:
+
+```text
+backreference-support-difference [walkzzz/re-mbt/Perl (ASCII)] compile-acceptance: baseline compiled the pattern; candidate rejected it
+```
 
 ## Unicode category corpus
 
@@ -79,7 +106,7 @@ moon build
 moon info
 ```
 
-The test suite covers adapter normalization, cache reuse behavior, expected outcomes, compile and execution differences, capture/span drift, invalid suite configuration, and Unicode boundary fixture construction.
+The test suite covers adapter normalization, cache reuse behavior, expected outcomes, compile and execution differences, capture/span drift, invalid suite configuration, Unicode boundary fixture construction, and real comparisons between the two bundled backends.
 
 It also verifies that a golden span contract catches a supplementary-character
 offset error, so adapters can pin the offset convention before comparing
@@ -87,8 +114,8 @@ backends.
 
 ## Scope
 
-Arachne is a compatibility-test library above regex engines. It complements engine projects by exercising their observable behavior against shared fixtures; it is not an alternative matcher and does not claim that a MoonBit regex engine or compatibility checker is absent elsewhere.
+Arachne is a compatibility-test library above regex engines. It complements engine projects by exercising their observable behavior against shared fixtures; it is not an alternative matcher. Its concrete integration with two independently implemented MoonBit engines reports differences in syntax acceptance and match results, while caller-owned contracts let applications pin the behavior they rely on.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE). Unicode category range data is separately covered by [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt).
+The Arachne source is Apache-2.0. See [LICENSE](LICENSE). Unicode category range data is separately covered by [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt). The re-mbt backend is a separately licensed dependency; see [third-party notices](THIRD_PARTY_NOTICES.md).
