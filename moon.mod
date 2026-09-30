@@ -8,6 +8,6 @@ repository = "https://github.com/wallll-wal6/arachne"
 
 license = "Apache-2.0"
 
-keywords = [ "regex", "automata", "pattern-matching", "nfa", "dfa" ]
+keywords = [ "regex", "unicode", "text-processing", "pattern-matching" ]
 
-description = "A dependency-free regular expression engine in pure MoonBit."
+description = "Unicode-aware, resource-bounded runtime pattern matching for MoonBit String applications."

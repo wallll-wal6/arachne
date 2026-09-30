@@ -1,6 +1,6 @@
 # Arachne
 
-A MoonBit-native regular-expression library for Unicode text processing. Arachne parses patterns into an AST and compiles them to a Thompson NFA. Its public API works with MoonBit `String`, matches Unicode scalar values, and returns UTF-16 code-unit spans that can be used with MoonBit string slicing. Matching uses explicit pattern and state budgets; it does not rely on backtracking.
+A Unicode-aware, resource-bounded runtime pattern library for MoonBit applications that process configuration-defined text rules. Arachne compiles patterns to a Thompson NFA, scans MoonBit `String` values by Unicode scalar, and returns UTF-16 code-unit spans that can be used directly for string slicing. Callers can lower compile budgets for individual applications or rule sets. Matching does not use backtracking.
 
 ## Intended fit
 
@@ -8,16 +8,21 @@ Arachne is a focused option for applications that need a reusable `String`-based
 
 MoonBit already provides regex syntax and the ecosystem includes other regex projects, so Arachne is not presented as the only regex option or as a replacement for every dialect. Its scope is one documented syntax with MoonBit `String` semantics, scalar-aware scanning, stable UTF-16 spans, bounded compilation, and a small set of text-processing APIs. For a feature-by-feature comparison and the cases where another option is a better fit, see [Positioning](docs/positioning.md).
 
-When patterns come from configuration, applications can choose stricter per-pattern and per-set compile budgets. The ceilings remain capped at Arachne's documented implementation maxima:
+For example, a log router can compile a tenant-provided Unicode field rule with a stricter budget, then use the returned match span directly on the original MoonBit string. The implementation maxima remain enforced:
 
 ```moon
+let line = "🦊 INFO user=山田42 action=login"
 let user_pattern = "user=([\\p{L}\\p{M}\\p{N}_]+)"
 let limits = @arachne.CompileLimits::standard()
   .with_max_pattern_scalars(256)
   .with_max_nfa_states(4096)
 match @arachne.Regex::compile_with_limits(user_pattern, limits) {
-  Ok(regex) => regex.contains("INFO user=山田42")
-  Err(_) => false
+  Ok(regex) =>
+    match regex.find(line) {
+      Some(span) => span.text(line)
+      None => ""
+    }
+  Err(_) => ""
 }
 ```
 
