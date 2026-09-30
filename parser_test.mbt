@@ -253,3 +253,58 @@ test "parser limits pattern length, nesting, and capture count" {
   }
   assert_true(is_err(many_groups.to_string()))
 }
+
+///|
+test "parser accepts stricter caller-supplied budgets" {
+  assert_true(
+    @arachne.parse_with_limits(
+      "ab",
+      @arachne.CompileLimits::standard().with_max_pattern_scalars(2),
+    )
+    is Ok(_),
+  )
+  assert_true(
+    @arachne.parse_with_limits(
+      "abc",
+      @arachne.CompileLimits::standard().with_max_pattern_scalars(2),
+    )
+    is Err(_),
+  )
+  assert_true(
+    @arachne.parse_with_limits(
+      "((a))",
+      @arachne.CompileLimits::standard().with_max_nesting_depth(1),
+    )
+    is Err(_),
+  )
+  assert_true(
+    @arachne.parse_with_limits(
+      "(a)(b)",
+      @arachne.CompileLimits::standard().with_max_capture_groups(1),
+    )
+    is Err(_),
+  )
+  assert_true(
+    @arachne.parse_with_limits(
+      "a{5}",
+      @arachne.CompileLimits::standard().with_max_repetition(4),
+    )
+    is Err(_),
+  )
+}
+
+///|
+test "parser rejects invalid custom budgets" {
+  let invalid = @arachne.CompileLimits::standard().with_max_pattern_scalars(-1)
+  match @arachne.parse_with_limits("a", invalid) {
+    Ok(_) => assert_true(false)
+    Err(error) => assert_true(error.to_string().contains("between 0 and 1024"))
+  }
+  assert_true(
+    @arachne.Regex::compile_with_limits(
+      "a",
+      @arachne.CompileLimits::standard().with_max_nfa_states(65537),
+    )
+    is Err(_),
+  )
+}

@@ -18,10 +18,14 @@ priv struct Parser {
   mut pos : Int
   mut groups : Int
   mut depth : Int
+  limits : CompileLimits
 }
 
 ///|
 let max_pattern_length = 1024
+
+///|
+let max_repetition = 1000
 
 ///|
 let max_capture_groups = 256
@@ -42,18 +46,34 @@ fn int_to_char(code : Int) -> Char {
 ///|
 /// Parses a pattern into an AST, or returns the first error encountered.
 pub fn parse(pattern : String) -> Result[Node, RegexError] {
+  parse_with_limits(pattern, CompileLimits::standard())
+}
+
+///|
+/// Parses a pattern using application-specific budgets no higher than the
+/// implementation ceilings in `CompileLimits::standard`.
+pub fn parse_with_limits(
+  pattern : String,
+  limits : CompileLimits,
+) -> Result[Node, RegexError] {
+  match limits.validate() {
+    Some(message) => return Err(RegexError::new(0, message))
+    None => ()
+  }
   let chars = pattern.to_array()
-  if chars.length() > max_pattern_length {
+  if chars.length() > limits.pattern_scalars {
     return Err(
       RegexError::new(
-        max_pattern_length, "pattern exceeds 1024 Unicode scalar values",
+        limits.pattern_scalars,
+        "pattern exceeds configured Unicode scalar limit of " +
+        limits.pattern_scalars.to_string(),
       ),
     )
   }
   if chars.length() == 0 {
     return Ok(Empty)
   }
-  let p = { src: chars, pos: 0, groups: 0, depth: 0, }
+  let p = { src: chars, pos: 0, groups: 0, depth: 0, limits, }
   match p.parse_alternation() {
     Ok(node) =>
       if p.pos != p.src.length() {
@@ -159,8 +179,18 @@ fn Parser::parse_number(self : Parser) -> Result[Int, RegexError] {
   let start = self.pos
   while self.peek() >= '0'.to_int() && self.peek() <= '9'.to_int() {
     let digit = self.peek() - '0'.to_int()
-    if value > 100 || (value == 100 && digit > 0) {
-      return Err(RegexError::new(start, "repetition count exceeds 1000"))
+    if value > self.limits.repetition / 10 ||
+      (
+        value == self.limits.repetition / 10 &&
+        digit > self.limits.repetition % 10
+      ) {
+      return Err(
+        RegexError::new(
+          start,
+          "repetition count exceeds configured limit of " +
+          self.limits.repetition.to_string(),
+        ),
+      )
     }
     value = value * 10 + digit
     self.advance()
@@ -423,14 +453,24 @@ fn Parser::parse_atom(self : Parser) -> Result[Node, RegexError] {
   }
   if c == '('.to_int() {
     self.advance()
-    if self.groups >= max_capture_groups {
+    if self.groups >= self.limits.capture_groups {
       return Err(
-        RegexError::new(self.pos, "capture group limit of 256 exceeded"),
+        RegexError::new(
+          self.pos,
+          "capture group limit of " +
+          self.limits.capture_groups.to_string() +
+          " exceeded",
+        ),
       )
     }
-    if self.depth >= max_group_depth {
+    if self.depth >= self.limits.nesting_depth {
       return Err(
-        RegexError::new(self.pos, "group nesting limit of 128 exceeded"),
+        RegexError::new(
+          self.pos,
+          "group nesting limit of " +
+          self.limits.nesting_depth.to_string() +
+          " exceeded",
+        ),
       )
     }
     self.groups = self.groups + 1

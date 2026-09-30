@@ -8,6 +8,19 @@ Arachne is a focused option for applications that need a reusable `String`-based
 
 MoonBit already provides regex syntax and the ecosystem includes other regex projects, so Arachne is not presented as the only regex option or as a replacement for every dialect. Its scope is one documented syntax with MoonBit `String` semantics, scalar-aware scanning, stable UTF-16 spans, bounded compilation, and a small set of text-processing APIs. For a feature-by-feature comparison and the cases where another option is a better fit, see [Positioning](docs/positioning.md).
 
+When patterns come from configuration, applications can choose stricter per-pattern and per-set compile budgets. The ceilings remain capped at Arachne's documented implementation maxima:
+
+```moon
+let user_pattern = "user=([\\p{L}\\p{M}\\p{N}_]+)"
+let limits = @arachne.CompileLimits::standard()
+  .with_max_pattern_scalars(256)
+  .with_max_nfa_states(4096)
+match @arachne.Regex::compile_with_limits(user_pattern, limits) {
+  Ok(regex) => regex.contains("INFO user=山田42")
+  Err(_) => false
+}
+```
+
 ## Current syntax
 
 | Pattern form | Meaning |
@@ -54,7 +67,7 @@ match @arachne.Regex::compile("user=([\\p{L}\\p{M}\\p{N}_]+)") {
 }
 ```
 
-The public API provides `Regex::compile`, `Regex::full_match`, `Regex::find`, `Regex::find_all`, `Regex::captures`, `Regex::replace_first`, `Regex::replace_all`, `Regex::replace_n`, `Regex::split`, `Regex::splitn`, `Regex::contains`, and `Regex::pattern`. `RegexSet` compiles multiple rules and returns all matching rule indexes, useful for categorizing log lines or routing requests. `Match::text` extracts a match span, `Captures::group` returns a numbered capture, and `Captures::text` extracts its text. Group zero is the complete match; optional groups that did not participate return `None`. Repeated groups report their last participating iteration. `parse` is public when callers need the syntax tree directly. `find_all` and replacement use non-overlapping leftmost-longest matches. Empty matches advance by one input character; `split` retains empty fields at boundaries. Replacement strings support `$0` through `$n`, `${n}`, and `$$`.
+The public API provides `Regex::compile`, `Regex::compile_with_limits`, `Regex::full_match`, `Regex::find`, `Regex::find_all`, `Regex::captures`, `Regex::replace_first`, `Regex::replace_all`, `Regex::replace_n`, `Regex::split`, `Regex::splitn`, `Regex::contains`, and `Regex::pattern`. `Regex::nfa_state_count` and `Regex::capture_group_count` expose compiled resource counts. `CompileLimits::standard` returns implementation ceilings; its `with_max_*` methods let an application lower individual limits. `parse_with_limits` applies pattern-length, nesting, capture, and repetition budgets; NFA-state budgets are checked by `Regex::compile_with_limits`, and RegexSet pattern/aggregate budgets by `RegexSet::compile_with_limits`. `RegexSet` compiles multiple rules and returns all matching rule indexes, useful for categorizing log lines or routing requests. `Match::text` extracts a match span, `Captures::group` returns a numbered capture, and `Captures::text` extracts its text. Group zero is the complete match; optional groups that did not participate return `None`. Repeated groups report their last participating iteration. `parse` is public when callers need the syntax tree directly. `find_all` and replacement use non-overlapping leftmost-longest matches. Empty matches advance by one input character; `split` retains empty fields at boundaries. Replacement strings support `$0` through `$n`, `${n}`, and `$$`.
 
 `find` returns the leftmost match and, at that start position, the longest possible end position. Empty matches are valid. `^` and `$` assert the boundaries of the entire input, including when searching with `find`; escape them to match literal characters. Dot matches any scalar value, including line breaks. Parsing and matching advance by Unicode scalar value, so a supplementary character such as an emoji is one regex atom. Public match offsets and substring extraction use MoonBit's UTF-16 code-unit offsets. `\p{...}` supports all Unicode General_Category abbreviations, their documented long names, and the aggregate groups `L`, `M`, `N`, `P`, `S`, `Z`, and `C`; `\P{...}` matches their complement. The generated tables target Unicode 17.0. `\w`, `\b`, and related shorthand categories use ASCII word characters. Non-capturing and named groups, lazy quantifiers, look-around, inline flags, case folding, and backreferences are not implemented.
 

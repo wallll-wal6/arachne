@@ -17,7 +17,7 @@ Arachne 是一款面向 MoonBit 应用的正则表达式与文本处理库。它
 
 MoonBit 已有内建正则语法和可运行时编译的社区引擎，因此 Arachne 的价值不能只写成“纯 MoonBit”“支持 Unicode”或“使用有限自动机”。例如，`moonbitlang/regexp` 已提供运行时编译、Unicode 类别、具名捕获，并在其文档中说明采用左优先匹配；[`walkzzz/re-mbt`](https://github.com/walkzzz/re-mbt) 定位为 OCaml `re` 移植，提供 Perl、PCRE、POSIX、Emacs、Glob、Str 六种语法前端及面向字节的输入模型。它们都是真实可用的替代方案，应在需求相符时优先选用。
 
-Arachne 的窄定位是：调用方需要左最长结果（例如 `=|==` 在 `==>` 上确定取 `==`），需要文档公开的模式/NFA/RegexSet 资源上限，并希望用同一库完成捕获、替换、分割与规则集筛选。MoonBit `re"..."` 则更适合静态模式与语言级匹配表达式。详细对照和版本来源见 [docs/positioning.md](docs/positioning.md)。这些差异描述的是已实现的行为与适用边界，不代表速度或整体质量优于其他实现。
+Arachne 的窄定位是把 MoonBit `String` 的 Unicode 标量扫描、UTF-16 公共偏移、左最长查找与可由调用方收紧的编译预算组合在同一运行时 API 中，并提供捕获、替换、分割和规则集筛选。预算可按配置或租户降低到应用所需的限值，不能突破库的实现上限。需要指出，左最长本身并非独有：MoonBit 的 `lexmatch` 有最长前缀模式，`re-mbt` 提供 POSIX 前端，其 OCaml 上游的 `Re.Posix` 使用 longest 编译策略。差异应表述为 MoonBit 字符串契约和调用方预算控制的组合，而不是单项功能领先。详细对照和版本来源见 [docs/positioning.md](docs/positioning.md)。不据此声称速度或整体质量优于其他实现。
 
 | 需求 | Arachne 的具体行为 | 对应场景 |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ Arachne 的窄定位是：调用方需要左最长结果（例如 `=|==` 在 `==
 | Unicode 字符串处理 | 匹配按 Unicode 标量推进；支持 Unicode 17.0 General_Category；对外偏移以 UTF-16 代码单元表示 | 多语言日志字段、用户输入和文本过滤 |
 | 端到端文本操作 | 同一已编译模式可执行搜索、捕获、替换、分割及规则集筛选 | 无需为每种变换再实现独立扫描流程 |
 
-因此，Arachne 是一款为左最长语义和明确资源边界而选用的 MoonBit 字符串处理库，不宣称取代 MoonBit 内建正则能力、`moonbitlang/regexp` 或其他成熟实现。比较细节和适用边界见 [docs/positioning.md](docs/positioning.md)。
+因此，Arachne 面向需要把 Unicode 字符串匹配语义与应用级编译预算一起配置的 MoonBit 程序，不宣称取代 MoonBit 内建正则能力、`moonbitlang/regexp` 或其他成熟实现。比较细节和适用边界见 [docs/positioning.md](docs/positioning.md)。
 
 ## 核心功能范围
 - **当前支持的常用语法与操作符**：支持字面量字符、通配符 `.`（匹配单个 Unicode 标量）、输入起止断言锚点 `^`（输入起始）与 `$`（输入终止）、连接、分支（`|`）、贪婪闭包量词（`*`, `+`, `?`）及受限计数重复（`a{n}`, `a{n,}`, `a{m,n}`，其中 $n \le 1000$）；
@@ -37,13 +37,14 @@ Arachne 的窄定位是：调用方需要左最长结果（例如 `=|==` 在 `==
 - **覆盖常见文本处理流程的接口**：提供 `Regex::compile`、`full_match`、`find`、`find_all`、`contains`、`captures`、`replace_first`、`replace_all`、`replace_n`（支持 `$0`~`$n`、`${n}` 与 `$$`）及保留空字段的 `split`、`splitn`；
 - **规则集批量过滤（RegexSet）**：提供 `RegexSet` 结构体，支持同时批量编译一组模式，统一返回所有命中规则的序号集合（`Array[Int]`），简化多规则分发与日志事件过滤开发；
 - **分轨执行与有界缓存保护**：`full_match` 走配备 256 条边有界缓存的局部 DFA 转移；`find` / `find_all` 走前向 NFA 子集模拟执行最长匹配搜索；`captures` 走 Tagged NFA（Pike VM）提取捕获。
+- **调用方可收紧的编译预算**：`CompileLimits::standard` 暴露实现上限；应用可按配置来源或租户进一步收紧模式标量数、嵌套深度、捕获组、重复次数、单模式 NFA 状态数及规则集规模。`parse_with_limits` 检查语法阶段的字符、分组、捕获及量词预算；`Regex::compile_with_limits` 再检查 NFA 状态，`RegexSet::compile_with_limits` 额外检查规则数和聚合状态。超限时返回带模式位置或序号的错误，调用方不能把限额调高到实现边界之外。
 
 ## 预期验收产物
 - **开源代码库**：`wallll-wal6/arachne` 仓库，工程结构规范，包含完整源码、测试套件及架构文档；
 - **本地验证记录**：
-  - 本次修改后执行 `moon check --deny-warn`，无错误和警告；
-  - 本次修改后执行 `moon test`，64 项测试全部通过；
-  - 执行 `moon fmt` 与 `git diff --check`。本次修改尚未推送，GitHub Actions 尚未验证这份工作区版本；
+  - 执行 `moon check --deny-warn`，无错误和警告；
+  - 执行 `moon test`，68 项测试全部通过；
+  - 仓库 CI 工作流同时配置类型检查、测试、公开接口生成和格式检查；
 - **Unicode 17.0 生成与更新工具链**：配套 `tools/generate_unicode.mjs` 离线计算脚本与操作指南，支持未来 Unicode 版本的离线更新与区间合并；
 - **技术设计与使用文档**：提供技术设计文档 [DESIGN.md](DESIGN.md) 与详细使用说明 [README.md](README.md)；
 - **后续规划交付产物**：
@@ -111,7 +112,7 @@ Arachne 的整体架构划分为四个清晰解耦的层次：
 ## 实施路线图与后续规划
 - **第一阶段：核心引擎与国际化支撑（当前已达成）**
   - 完成手写递归下降解析器、NFA 编译器、带标记子匹配捕获机；
-  - 完成 Unicode 17.0 离线生成与单标量推进；本地测试项数及检查结果以提交前实际验证输出为准。
+  - 完成 Unicode 17.0 离线生成、单标量推进、运行时编译及可收紧的调用方资源预算；
 - **第二阶段：基准测试与覆盖率测量（计划周期：2 周）**
   - 编写多平台 Benchmark 评测脚本，产出吞吐量与内存占用基准测试报告；
   - 接入覆盖率分析工具，补充边界模糊测试，出具正式覆盖率报告。

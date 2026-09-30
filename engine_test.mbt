@@ -412,3 +412,54 @@ test "compile rejects nested repetitions that exceed the NFA budget" {
   }
   assert_true(regex("a{1000}").full_match("a".repeat(1000)))
 }
+
+///|
+test "runtime compilation reports resources and honors caller budgets" {
+  let pattern = match @arachne.Regex::compile("(ab){2}") {
+    Ok(regex) => regex
+    Err(_) => abort("expected the pattern to compile")
+  }
+  assert_eq(pattern.capture_group_count(), 1)
+  assert_true(pattern.nfa_state_count() > 1)
+  assert_true(pattern.full_match("abab"))
+
+  let limits = @arachne.CompileLimits::standard().with_max_nfa_states(2)
+  match @arachne.Regex::compile_with_limits("a{2}", limits) {
+    Ok(_) => assert_true(false)
+    Err(error) => assert_true(error.to_string().contains("2 NFA states"))
+  }
+  assert_true(@arachne.Regex::compile_with_limits("ab", limits) is Err(_))
+
+  let minimal = @arachne.CompileLimits::standard().with_max_nfa_states(1)
+  match @arachne.Regex::compile_with_limits("", minimal) {
+    Ok(empty) => assert_eq(empty.nfa_state_count(), 1)
+    Err(_) => assert_true(false)
+  }
+}
+
+///|
+test "regex sets enforce caller pattern and aggregate state budgets" {
+  let limits = @arachne.CompileLimits::standard()
+    .with_max_set_patterns(1)
+    .with_max_set_nfa_states(2)
+  match @arachne.RegexSet::compile_with_limits(["a", "b"], limits) {
+    Ok(_) => assert_true(false)
+    Err(error) => assert_eq(error.pattern_index, 1)
+  }
+  match
+    @arachne.RegexSet::compile_with_limits(
+      ["a", "b"],
+      @arachne.CompileLimits::standard().with_max_set_nfa_states(3),
+    ) {
+    Ok(_) => assert_true(false)
+    Err(error) => assert_eq(error.pattern_index, 1)
+  }
+  match
+    @arachne.RegexSet::compile_with_limits(
+      ["a", "b"],
+      @arachne.CompileLimits::standard().with_max_set_nfa_states(4),
+    ) {
+    Ok(set) => assert_eq(set.matching_patterns("ab"), [0, 1])
+    Err(_) => assert_true(false)
+  }
+}

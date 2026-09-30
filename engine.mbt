@@ -97,22 +97,45 @@ pub fn RegexSetError::to_string(self : RegexSetError) -> String {
 pub fn RegexSet::compile(
   patterns : Array[String],
 ) -> Result[RegexSet, RegexSetError] {
-  if patterns.length() > 1024 {
+  RegexSet::compile_with_limits(patterns, CompileLimits::standard())
+}
+
+///|
+/// Compiles a rule set within application-specific budgets. The first invalid
+/// pattern or the pattern that crosses the aggregate state budget is reported.
+pub fn RegexSet::compile_with_limits(
+  patterns : Array[String],
+  limits : CompileLimits,
+) -> Result[RegexSet, RegexSetError] {
+  match limits.validate() {
+    Some(message) =>
+      return Err({ pattern_index: 0, error: RegexError::new(0, message), })
+    None => ()
+  }
+  if patterns.length() > limits.set_patterns {
     return Err({
-      pattern_index: 1024,
-      error: RegexError::new(0, "regex set exceeds 1024 patterns"),
+      pattern_index: limits.set_patterns,
+      error: RegexError::new(
+        0,
+        "regex set exceeds " +
+        limits.set_patterns.to_string() +
+        " patterns (configured budget)",
+      ),
     })
   }
   let compiled : Array[Regex] = []
   let mut total_states = 0
   for i, pattern in patterns {
-    match Regex::compile(pattern) {
+    match Regex::compile_with_limits(pattern, limits) {
       Ok(regex) => {
-        if regex.nfa.states.length() > max_nfa_states - total_states {
+        if regex.nfa.states.length() > limits.set_nfa_states - total_states {
           return Err({
             pattern_index: i,
             error: RegexError::new(
-              0, "regex set exceeds 65536 aggregate NFA states",
+              0,
+              "regex set exceeds aggregate NFA states (configured limit " +
+              limits.set_nfa_states.to_string() +
+              ")",
             ),
           })
         }
@@ -185,10 +208,31 @@ pub fn Captures::text(self : Captures, index : Int, text : String) -> String? {
 ///|
 /// Compiles a pattern into a reusable Regex, or returns the first error.
 pub fn Regex::compile(pattern : String) -> Result[Regex, RegexError] {
-  match parse(pattern) {
+  Regex::compile_with_limits(pattern, CompileLimits::standard())
+}
+
+///|
+/// Compiles a pattern within application-specific budgets. Custom values may
+/// lower, but never raise, the implementation ceilings.
+pub fn Regex::compile_with_limits(
+  pattern : String,
+  limits : CompileLimits,
+) -> Result[Regex, RegexError] {
+  match limits.validate() {
+    Some(message) => return Err(RegexError::new(0, message))
+    None => ()
+  }
+  match parse_with_limits(pattern, limits) {
     Ok(node) =>
-      if estimate_nfa_states(node) >= max_nfa_states {
-        Err(RegexError::new(0, "compiled expression exceeds 65536 NFA states"))
+      if estimate_nfa_states(node) >= limits.nfa_states {
+        Err(
+          RegexError::new(
+            0,
+            "compiled expression exceeds " +
+            limits.nfa_states.to_string() +
+            " NFA states (configured limit)",
+          ),
+        )
       } else {
         Ok({
           pattern,
@@ -202,7 +246,25 @@ pub fn Regex::compile(pattern : String) -> Result[Regex, RegexError] {
 }
 
 ///|
+/// Returns the number of Thompson NFA instructions, including the accept state.
+pub fn Regex::nfa_state_count(self : Regex) -> Int {
+  self.nfa.states.length()
+}
+
+///|
+/// Returns the number of numbered capture groups, excluding group zero.
+pub fn Regex::capture_group_count(self : Regex) -> Int {
+  self.group_count
+}
+
+///|
 let max_nfa_states = 65536
+
+///|
+let max_regex_set_patterns = 1024
+
+///|
+let max_regex_set_nfa_states = 65536
 
 ///|
 fn capped_add(a : Int, b : Int) -> Int {
@@ -228,7 +290,8 @@ fn capped_mul(a : Int, b : Int) -> Int {
 /// Estimate the Thompson instruction count without expanding repetitions.
 fn estimate_nfa_states(node : Node) -> Int {
   match node {
-    Empty | Start | End | WordBoundary | NotWordBoundary => 1
+    Empty => 0
+    Start | End | WordBoundary | NotWordBoundary => 1
     Lit(_) | Class(_, _) | Dot => 1
     Concat(a, b) => capped_add(estimate_nfa_states(a), estimate_nfa_states(b))
     Alt(a, b) =>
