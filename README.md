@@ -46,7 +46,7 @@ Inside a class, `\` escapes the next character; escape `]`, `-`, `^`, or `\` to 
 
 ## Use
 
-Add the module to a MoonBit project, then compile and run:
+The Mooncakes release is not published yet. From a checkout, run `moon test` to verify the library. After publication, install it in another MoonBit project with `moon add wallll-wal6/arachne`, then compile and run:
 
 ```moon
 match @arachne.Regex::compile("^(ab|cd)+$") {
