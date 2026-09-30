@@ -45,8 +45,10 @@ pub(all) struct ContractCase {
   pattern : String
   input : String
   expected : ExpectedOutcome?
+  expected_span : (Int, Int)?
 }
 pub fn ContractCase::expect_match(id~ : String, pattern~ : String, input~ : String, text~ : String, captures~ : Array[String?]) -> Self
+pub fn ContractCase::expect_match_span(id~ : String, pattern~ : String, input~ : String, text~ : String, captures~ : Array[String?], start~ : Int, end~ : Int) -> Self
 pub fn ContractCase::expect_no_match(id~ : String, pattern~ : String, input~ : String) -> Self
 pub fn ContractCase::new(id~ : String, pattern~ : String, input~ : String) -> Self
 
@@ -58,6 +60,7 @@ pub(all) enum ContractError {
   BaselineNotFound(String)
   DuplicateCase(String)
   EmptyCaseId
+  InvalidExpectedSpan(String)
 } derive(Eq, @debug.Debug)
 
 pub(all) struct EngineAdapter {

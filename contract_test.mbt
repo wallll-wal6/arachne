@@ -31,6 +31,92 @@ test "MoonBit regexp adapter preserves match and capture observations" {
 }
 
 ///|
+test "golden contract detects a Unicode match-span regression" {
+  let report = match
+    run_contracts(
+      [
+        ContractCase::expect_match_span(
+          id="supplementary-prefix-offset",
+          pattern="(a)",
+          input="🦊a",
+          text="a",
+          captures=[Some("a")],
+          start=2,
+          end=3,
+        ),
+      ],
+      [moonbit_regexp_adapter()],
+      "moonbitlang/regexp",
+    ) {
+    Ok(report) => report
+    Err(_) => abort("valid span contract should run")
+  }
+  assert_true(report.is_compatible())
+  match report.runs[0].outcome {
+    EngineOutcome::Completed(Some(observation)) => {
+      assert_eq(observation.start, 2)
+      assert_eq(observation.end, 3)
+    }
+    _ => abort("the official engine should produce a match")
+  }
+}
+
+///|
+test "span expectations fail when an adapter reports a different offset" {
+  let wrong_span = EngineAdapter::new(id="wrong-span", compile=_pattern => {
+    Ok(
+      CompiledMatcher::new(observe=_input => {
+        Ok(Some({ text: "a", start: 0, end: 1, captures: [], }))
+      }),
+    )
+  })
+  let report = match
+    run_contracts(
+      [
+        ContractCase::expect_match_span(
+          id="span-contract",
+          pattern="a",
+          input="ba",
+          text="a",
+          captures=[],
+          start=1,
+          end=2,
+        ),
+      ],
+      [wrong_span],
+      "wrong-span",
+    ) {
+    Ok(report) => report
+    Err(_) => abort("valid span expectation should run")
+  }
+  assert_eq(report.findings.length(), 1)
+  assert_eq(report.findings[0].detail, "match span differs from the contract")
+}
+
+///|
+test "contract runner rejects invalid expected spans before invoking adapters" {
+  let compile_count = [0]
+  let adapter = EngineAdapter::new(id="counted", compile=_pattern => {
+    compile_count[0] = compile_count[0] + 1
+    Ok(CompiledMatcher::new(observe=_input => Ok(None)))
+  })
+  let invalid = ContractCase::expect_match_span(
+    id="outside-input",
+    pattern="a",
+    input="a",
+    text="a",
+    captures=[],
+    start=0,
+    end=2,
+  )
+  assert_true(
+    run_contracts([invalid], [adapter], "counted")
+    is Err(ContractError::InvalidExpectedSpan("outside-input")),
+  )
+  assert_eq(compile_count[0], 0)
+}
+
+///|
 test "contract runner detects cross-engine behavior drift" {
   let reference = moonbit_regexp_adapter()
   let alternate = EngineAdapter::new(id="fixture-engine", compile=_pattern => {

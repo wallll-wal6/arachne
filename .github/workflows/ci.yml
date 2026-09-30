@@ -20,6 +20,8 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - name: Show MoonBit toolchain version
         run: moon version --all
+      - name: Resolve pinned module dependencies
+        run: moon update
       - name: Check warnings
         run: moon check --deny-warn
       - name: Run tests

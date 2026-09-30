@@ -4,13 +4,24 @@ Arachne is a MoonBit library for checking regular-expression behavior contracts 
 
 Arachne does not implement a regex syntax, parser, or matching engine. Its first-party adapter calls the official [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt) package. Applications can add adapters for another engine or for a newer engine version without copying either implementation.
 
+This places Arachne above regex libraries: engines parse and match; Arachne
+checks that their observable behavior satisfies shared contracts. The
+[project boundary](docs/positioning.md) compares these responsibilities with
+engine projects and documents the adapter requirements and limits.
+
 ## What it checks
 
 - **Behavior drift:** compare a selected baseline against one or more candidate adapters.
-- **Golden expectations:** assert that a case should match or not match, including whole-match and capture text.
+- **Golden expectations:** assert match presence, whole-match text, capture text, and—when important—normalized whole-match spans.
 - **Unicode boundary fixtures:** generate deterministic positive and adjacent-negative cases from Unicode 17.0 general-category ranges, with a caller-selected case cap.
 - **Stable reports:** preserve fixture and adapter order, and format findings for build logs.
 - **Compile reuse:** compile each distinct pattern once per adapter during a run, then reuse the compiled matcher for all matching cases.
+
+When callers need to pin an offset as well as text, `expect_match_span` asserts
+the adapter's normalized whole-match offsets. For example, with the bundled
+adapter, matching `a` after the supplementary scalar `🦊` has span `[2, 3)` in
+MoonBit `StringView` code units. This catches byte/scalar/code-unit conversion
+mistakes at an adapter boundary.
 
 This is a fixture-based compatibility check, not a proof that two engines are equivalent for every pattern or input. It does not impose execution timeouts or resource limits on an adapter; use engines and test inputs appropriate for the environment.
 
@@ -61,6 +72,7 @@ The corpus is a boundary-focused regression aid, not an exhaustive test of every
 ## Development
 
 ```sh
+moon update
 moon check --deny-warn
 moon test
 moon build
@@ -68,6 +80,10 @@ moon info
 ```
 
 The test suite covers adapter normalization, cache reuse behavior, expected outcomes, compile and execution differences, capture/span drift, invalid suite configuration, and Unicode boundary fixture construction.
+
+It also verifies that a golden span contract catches a supplementary-character
+offset error, so adapters can pin the offset convention before comparing
+backends.
 
 ## Scope
 

@@ -29,6 +29,7 @@ pub(all) struct ContractCase {
   pattern : String
   input : String
   expected : ExpectedOutcome?
+  expected_span : (Int, Int)?
 }
 
 ///|
@@ -95,6 +96,7 @@ pub(all) enum ContractError {
   BaselineNotFound(String)
   DuplicateCase(String)
   EmptyCaseId
+  InvalidExpectedSpan(String)
 } derive(Eq, Debug)
 
 ///|
@@ -121,7 +123,7 @@ pub fn ContractCase::new(
   pattern~ : String,
   input~ : String,
 ) -> ContractCase {
-  { id, pattern, input, expected: None, }
+  { id, pattern, input, expected: None, expected_span: None, }
 }
 
 ///|
@@ -131,7 +133,13 @@ pub fn ContractCase::expect_no_match(
   pattern~ : String,
   input~ : String,
 ) -> ContractCase {
-  { id, pattern, input, expected: Some(ExpectedOutcome::ExpectedNoMatch), }
+  {
+    id,
+    pattern,
+    input,
+    expected: Some(ExpectedOutcome::ExpectedNoMatch),
+    expected_span: None,
+  }
 }
 
 ///|
@@ -148,6 +156,28 @@ pub fn ContractCase::expect_match(
     pattern,
     input,
     expected: Some(ExpectedOutcome::ExpectedMatch(text~, captures~)),
+    expected_span: None,
+  }
+}
+
+///|
+/// Construct a contract case that also asserts the normalized whole-match
+/// span. Offsets use the adapter contract's zero-based StringView code units.
+pub fn ContractCase::expect_match_span(
+  id~ : String,
+  pattern~ : String,
+  input~ : String,
+  text~ : String,
+  captures~ : Array[String?],
+  start~ : Int,
+  end~ : Int,
+) -> ContractCase {
+  {
+    id,
+    pattern,
+    input,
+    expected: Some(ExpectedOutcome::ExpectedMatch(text~, captures~)),
+    expected_span: Some((start, end)),
   }
 }
 
@@ -185,6 +215,10 @@ pub fn run_contracts(
   for i, case in cases {
     if case.id == "" {
       return Err(ContractError::EmptyCaseId)
+    }
+    if case.expected_span is Some((start, end)) &&
+      (start < 0 || end < start || end > case.input.length()) {
+      return Err(ContractError::InvalidExpectedSpan(case.id))
     }
     for j = 0; j < i; j = j + 1 {
       if cases[j].id == case.id {
@@ -427,7 +461,7 @@ fn check_expectation(
       }
     Some(ExpectedOutcome::ExpectedMatch(text~, captures~)) =>
       match actual {
-        Completed(Some(observation)) =>
+        Completed(Some(observation)) => {
           if observation.text != text || observation.captures != captures {
             push_finding(
               case.id,
@@ -437,6 +471,17 @@ fn check_expectation(
               findings,
             )
           }
+          if case.expected_span is Some((start, end)) &&
+            (observation.start != start || observation.end != end) {
+            push_finding(
+              case.id,
+              engine_id,
+              FindingKind::ExpectationFailed,
+              "match span differs from the contract",
+              findings,
+            )
+          }
+        }
         _ =>
           push_finding(
             case.id,
