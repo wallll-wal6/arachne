@@ -30,15 +30,6 @@ jobs:
         run: |
           moon info
           git diff --exit-code
-      - name: Validate published package contents
-        shell: bash
-        run: |
-          files="$(moon package --list)"
-          printf '%s\n' "$files"
-          if grep -Fq 'arachne_项目申报书.md' <<<"$files"; then
-            echo "The contest application must not be included in the library package."
-            exit 1
-          fi
       - name: Check formatting
         run: |
           moon fmt

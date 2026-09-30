@@ -2,6 +2,3 @@ target/
 .moon/
 _build/
 /UnicodeData.txt
-
-# Keep contest application details in the repository, not in the library package.
-/arachne_项目申报书.md

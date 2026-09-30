@@ -6,140 +6,105 @@ import {
 }
 
 // Values
-pub fn parse(String) -> Result[Node, RegexError]
+pub fn moonbit_regexp_adapter() -> EngineAdapter
 
-pub fn parse_with_limits(String, CompileLimits) -> Result[Node, RegexError]
+pub fn run_contracts(Array[ContractCase], Array[EngineAdapter], String) -> Result[CompatibilityReport, ContractError]
+
+pub fn unicode_category_cases(category~ : String, max_cases~ : Int) -> Result[Array[ContractCase], UnicodeCorpusError]
 
 // Errors
 
 // Types and methods
-pub(all) enum BuiltinClass {
-  Digit
-  Word
-  Whitespace
-} derive(Eq, @debug.Debug)
-pub fn BuiltinClass::equal(Self, Self) -> Bool
-pub fn BuiltinClass::not_equal(Self, Self) -> Bool
-pub fn BuiltinClass::to_repr(Self) -> @debug.Repr
+pub(all) struct CompatibilityFinding {
+  case_id : String
+  engine_id : String
+  kind : FindingKind
+  detail : String
+}
 
-pub(all) struct Captures {
-  // private fields
-} derive(Eq, @debug.Debug)
-pub fn Captures::equal(Self, Self) -> Bool
-pub fn Captures::group(Self, Int) -> Match?
-pub fn Captures::len(Self) -> Int
-pub fn Captures::not_equal(Self, Self) -> Bool
-pub fn Captures::text(Self, Int, String) -> String?
-pub fn Captures::to_repr(Self) -> @debug.Repr
+pub(all) struct CompatibilityReport {
+  baseline_id : String
+  case_count : Int
+  engine_count : Int
+  runs : Array[EngineRun]
+  findings : Array[CompatibilityFinding]
+}
+pub fn CompatibilityReport::case_count(Self) -> Int
+pub fn CompatibilityReport::engine_count(Self) -> Int
+pub fn CompatibilityReport::format_findings(Self) -> String
+pub fn CompatibilityReport::is_compatible(Self) -> Bool
+pub fn CompatibilityReport::summary(Self) -> String
 
-pub(all) enum ClassItem {
-  Single(Char)
-  Range(Char, Char)
-  Builtin(BuiltinClass, Bool)
-  Property(String, Bool)
-} derive(Eq, @debug.Debug)
-pub fn ClassItem::equal(Self, Self) -> Bool
-pub fn ClassItem::not_equal(Self, Self) -> Bool
-pub fn ClassItem::to_repr(Self) -> @debug.Repr
+pub(all) struct CompiledMatcher {
+  observe : (String) -> Result[MatchObservation?, String]
+}
+pub fn CompiledMatcher::new(observe~ : (String) -> Result[MatchObservation?, String]) -> Self
 
-pub struct CompileLimits {
-  // private fields
-} derive(Eq, @debug.Debug)
-pub fn CompileLimits::equal(Self, Self) -> Bool
-pub fn CompileLimits::not_equal(Self, Self) -> Bool
-pub fn CompileLimits::standard() -> Self
-pub fn CompileLimits::to_repr(Self) -> @debug.Repr
-pub fn CompileLimits::with_max_capture_groups(Self, Int) -> Self
-pub fn CompileLimits::with_max_nesting_depth(Self, Int) -> Self
-pub fn CompileLimits::with_max_nfa_states(Self, Int) -> Self
-pub fn CompileLimits::with_max_pattern_scalars(Self, Int) -> Self
-pub fn CompileLimits::with_max_repetition(Self, Int) -> Self
-pub fn CompileLimits::with_max_set_nfa_states(Self, Int) -> Self
-pub fn CompileLimits::with_max_set_patterns(Self, Int) -> Self
+pub(all) struct ContractCase {
+  id : String
+  pattern : String
+  input : String
+  expected : ExpectedOutcome?
+}
+pub fn ContractCase::expect_match(id~ : String, pattern~ : String, input~ : String, text~ : String, captures~ : Array[String?]) -> Self
+pub fn ContractCase::expect_no_match(id~ : String, pattern~ : String, input~ : String) -> Self
+pub fn ContractCase::new(id~ : String, pattern~ : String, input~ : String) -> Self
 
-pub(all) struct Match {
+pub(all) enum ContractError {
+  EmptyBaseline
+  NoEngines
+  EmptyEngineId
+  DuplicateEngine(String)
+  BaselineNotFound(String)
+  DuplicateCase(String)
+  EmptyCaseId
+} derive(Eq, @debug.Debug)
+
+pub(all) struct EngineAdapter {
+  id : String
+  compile : (String) -> Result[CompiledMatcher, String]
+}
+pub fn EngineAdapter::new(id~ : String, compile~ : (String) -> Result[CompiledMatcher, String]) -> Self
+
+pub(all) enum EngineOutcome {
+  CompileRejected(String)
+  ExecutionFailed(String)
+  Completed(MatchObservation?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct EngineRun {
+  case_id : String
+  engine_id : String
+  outcome : EngineOutcome
+}
+
+pub(all) enum ExpectedOutcome {
+  ExpectedNoMatch
+  ExpectedMatch(text~ : String, captures~ : Array[String?])
+} derive(Eq, @debug.Debug)
+
+pub(all) enum FindingKind {
+  CompileAcceptanceDiff
+  ExecutionDiff
+  MatchPresenceDiff
+  MatchedTextDiff
+  MatchSpanDiff
+  CaptureDiff
+  ExpectationFailed
+} derive(Eq, @debug.Debug)
+
+pub(all) struct MatchObservation {
+  text : String
   start : Int
   end : Int
+  captures : Array[String?]
 } derive(Eq, @debug.Debug)
-pub fn Match::equal(Self, Self) -> Bool
-pub fn Match::not_equal(Self, Self) -> Bool
-pub fn Match::text(Self, String) -> String
-pub fn Match::to_repr(Self) -> @debug.Repr
 
-pub(all) enum Node {
-  Empty
-  Lit(Char)
-  Class(Array[ClassItem], Bool)
-  Dot
-  Start
-  End
-  WordBoundary
-  NotWordBoundary
-  Concat(Node, Node)
-  Alt(Node, Node)
-  Capture(Int, Node)
-  Star(Node)
-  Plus(Node)
-  Optional(Node)
-  Count(Node, Int, Int)
+pub(all) enum UnicodeCorpusError {
+  UnknownCategory(String)
+  InvalidCaseLimit
+  NoScalarSamples(String)
 } derive(Eq, @debug.Debug)
-pub fn Node::equal(Self, Self) -> Bool
-pub fn Node::not_equal(Self, Self) -> Bool
-pub fn Node::to_pattern(Self) -> String
-pub fn Node::to_repr(Self) -> @debug.Repr
-
-pub struct Regex {
-  // private fields
-} derive(Eq, @debug.Debug)
-pub fn Regex::capture_group_count(Self) -> Int
-pub fn Regex::captures(Self, String) -> Captures?
-pub fn Regex::compile(String) -> Result[Self, RegexError]
-pub fn Regex::compile_with_limits(String, CompileLimits) -> Result[Self, RegexError]
-pub fn Regex::contains(Self, String) -> Bool
-pub fn Regex::equal(Self, Self) -> Bool
-pub fn Regex::find(Self, String) -> Match?
-pub fn Regex::find_all(Self, String) -> Array[Match]
-pub fn Regex::full_match(Self, String) -> Bool
-pub fn Regex::nfa_state_count(Self) -> Int
-pub fn Regex::not_equal(Self, Self) -> Bool
-pub fn Regex::pattern(Self) -> String
-pub fn Regex::replace_all(Self, String, String) -> String
-pub fn Regex::replace_first(Self, String, String) -> String
-pub fn Regex::replace_n(Self, String, String, Int) -> String
-pub fn Regex::split(Self, String) -> Array[String]
-pub fn Regex::splitn(Self, String, Int) -> Array[String]
-pub fn Regex::to_repr(Self) -> @debug.Repr
-
-pub(all) struct RegexError {
-  pos : Int
-  msg : String
-} derive(Eq, @debug.Debug)
-pub fn RegexError::equal(Self, Self) -> Bool
-pub fn RegexError::new(Int, String) -> Self
-pub fn RegexError::not_equal(Self, Self) -> Bool
-pub fn RegexError::to_repr(Self) -> @debug.Repr
-pub fn RegexError::to_string(Self) -> String
-
-pub(all) struct RegexSet {
-  // private fields
-} derive(Eq, @debug.Debug)
-pub fn RegexSet::compile(Array[String]) -> Result[Self, RegexSetError]
-pub fn RegexSet::compile_with_limits(Array[String], CompileLimits) -> Result[Self, RegexSetError]
-pub fn RegexSet::equal(Self, Self) -> Bool
-pub fn RegexSet::is_match(Self, String) -> Bool
-pub fn RegexSet::len(Self) -> Int
-pub fn RegexSet::matching_patterns(Self, String) -> Array[Int]
-pub fn RegexSet::not_equal(Self, Self) -> Bool
-pub fn RegexSet::to_repr(Self) -> @debug.Repr
-
-pub(all) struct RegexSetError {
-  pattern_index : Int
-  error : RegexError
-} derive(Eq, @debug.Debug)
-pub fn RegexSetError::equal(Self, Self) -> Bool
-pub fn RegexSetError::not_equal(Self, Self) -> Bool
-pub fn RegexSetError::to_repr(Self) -> @debug.Repr
-pub fn RegexSetError::to_string(Self) -> String
 
 // Type aliases
 

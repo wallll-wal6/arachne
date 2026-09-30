@@ -5944,3 +5944,93 @@ fn unicode_category_ranges(category : String) -> Array[UnicodeRange] {
     _ => []
   }
 }
+
+///|
+/// Errors returned while deriving boundary cases from Unicode category data.
+pub(all) enum UnicodeCorpusError {
+  UnknownCategory(String)
+  InvalidCaseLimit
+  NoScalarSamples(String)
+} derive(Eq, Debug)
+
+///|
+/// Build deterministic positive and adjacent-negative cases from the Unicode
+/// 17.0 category range boundaries. The limit caps the number of cases emitted.
+/// This is a test-corpus oracle, not a Unicode classifier used at runtime.
+pub fn unicode_category_cases(
+  category~ : String,
+  max_cases~ : Int,
+) -> Result[Array[ContractCase], UnicodeCorpusError] {
+  if max_cases < 1 {
+    return Err(UnicodeCorpusError::InvalidCaseLimit)
+  }
+  let ranges = unicode_category_ranges(category)
+  if ranges.is_empty() {
+    return Err(UnicodeCorpusError::UnknownCategory(category))
+  }
+  let pattern = "^\\p{\{category}}$"
+  let cases : Array[ContractCase] = []
+  let mut ordinal = 0
+  for range in ranges {
+    if cases.length() >= max_cases {
+      break
+    }
+    append_unicode_case(cases, category, ordinal, range.start, true, pattern)
+    ordinal = ordinal + 1
+    if cases.length() < max_cases && range.start > 0 {
+      append_unicode_case(
+        cases,
+        category,
+        ordinal,
+        range.start - 1,
+        false,
+        pattern,
+      )
+      ordinal = ordinal + 1
+    }
+    if cases.length() < max_cases && range.end != range.start {
+      append_unicode_case(cases, category, ordinal, range.end, true, pattern)
+      ordinal = ordinal + 1
+    }
+    if cases.length() < max_cases && range.end < 0x10FFFF {
+      append_unicode_case(
+        cases,
+        category,
+        ordinal,
+        range.end + 1,
+        false,
+        pattern,
+      )
+      ordinal = ordinal + 1
+    }
+  }
+  if cases.is_empty() {
+    return Err(UnicodeCorpusError::NoScalarSamples(category))
+  }
+  Ok(cases)
+}
+
+///|
+fn append_unicode_case(
+  cases : Array[ContractCase],
+  category : String,
+  ordinal : Int,
+  codepoint : Int,
+  expected_match : Bool,
+  pattern : String,
+) -> Unit {
+  match codepoint.to_char() {
+    None => ()
+    Some(scalar) => {
+      let input = "\{scalar}"
+      let id = "unicode-\{category}-\{ordinal}"
+      if expected_match {
+        cases.push(
+          ContractCase::expect_match(id~, pattern~, input~, text=input, captures=[]),
+        )
+      } else {
+        cases.push(ContractCase::expect_no_match(id~, pattern~, input~))
+      }
+    }
+  }
+}

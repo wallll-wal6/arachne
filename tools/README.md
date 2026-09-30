@@ -1,12 +1,12 @@
-# Unicode table generation
+# Unicode corpus data
 
-The engine's general-category matcher uses compact, sorted ranges generated from the official Unicode Character Database 17.0 `UnicodeData.txt`.
+The compatibility corpus uses inclusive Unicode General_Category ranges derived from Unicode 17.0 `UnicodeData.txt`. The generated file is test-oracle data; it is not used to classify input or execute regular expressions.
 
-Download that versioned file and run the generator from the repository root:
+To regenerate it, download the versioned Unicode data file and run:
 
 ```sh
 curl -fsSLo UnicodeData.txt https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt
 node tools/generate_unicode.mjs UnicodeData.txt > unicode_data.mbt
 ```
 
-The generator expands `<..., First>` / `<..., Last>` records, groups the 30 general categories and their seven aggregate groups, adds the unassigned `Cn` complement, then writes sorted inclusive ranges for binary search. It does not edit the engine. Review the generated diff and run `moon check` and `moon test` after regenerating. Unicode data license terms are reproduced in [../UNICODE-LICENSE.txt](../UNICODE-LICENSE.txt).
+Review the generated diff, run `moon check --deny-warn` and `moon test`, and keep the associated data notice in [../UNICODE-LICENSE.txt](../UNICODE-LICENSE.txt). The range ordering and inclusive endpoints are part of the corpus generator's input contract.

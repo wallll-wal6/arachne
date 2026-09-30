@@ -8,6 +8,10 @@ repository = "https://github.com/wallll-wal6/arachne"
 
 license = "Apache-2.0"
 
-keywords = [ "regex", "unicode", "text-processing", "pattern-matching" ]
+keywords = [ "regex", "compatibility", "testing", "unicode" ]
 
-description = "Unicode-aware, resource-bounded runtime pattern matching for MoonBit String applications."
+description = "Behavior contract testing across MoonBit regex backends with Unicode boundary fixtures."
+
+import {
+  "moonbitlang/regexp@0.3.5",
+}

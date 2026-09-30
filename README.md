@@ -1,93 +1,78 @@
 # Arachne
 
-A Unicode-aware, resource-bounded runtime pattern library for MoonBit applications that process configuration-defined text rules. Arachne compiles patterns to a Thompson NFA, scans MoonBit `String` values by Unicode scalar, and returns UTF-16 code-unit spans that can be used directly for string slicing. Callers can lower compile budgets for individual applications or rule sets. Matching does not use backtracking.
+Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 
-## Intended fit
+Arachne does not implement a regex syntax, parser, or matching engine. Its first-party adapter calls the official [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt) package. Applications can add adapters for another engine or for a newer engine version without copying either implementation.
 
-Arachne is a focused option for applications that need a reusable `String`-based API for searching, extracting, replacing, splitting, or routing multilingual text. Examples include log-field extraction with Unicode letter and number categories, lightweight source scanning, and rule-based text classification. Its matching contract is leftmost-longest: at the earliest start position, the longest match wins regardless of alternation order. This is useful when selecting operators or tokens such as `=` and `==`.
+## What it checks
 
-MoonBit already provides regex syntax and the ecosystem includes other regex projects, so Arachne is not presented as the only regex option or as a replacement for every dialect. Its scope is one documented syntax with MoonBit `String` semantics, scalar-aware scanning, stable UTF-16 spans, bounded compilation, and a small set of text-processing APIs. For a feature-by-feature comparison and the cases where another option is a better fit, see [Positioning](docs/positioning.md).
+- **Behavior drift:** compare a selected baseline against one or more candidate adapters.
+- **Golden expectations:** assert that a case should match or not match, including whole-match and capture text.
+- **Unicode boundary fixtures:** generate deterministic positive and adjacent-negative cases from Unicode 17.0 general-category ranges, with a caller-selected case cap.
+- **Stable reports:** preserve fixture and adapter order, and format findings for build logs.
+- **Compile reuse:** compile each distinct pattern once per adapter during a run, then reuse the compiled matcher for all matching cases.
 
-For example, a log router can compile a tenant-provided Unicode field rule with a stricter budget, then use the returned match span directly on the original MoonBit string. The implementation maxima remain enforced:
+This is a fixture-based compatibility check, not a proof that two engines are equivalent for every pattern or input. It does not impose execution timeouts or resource limits on an adapter; use engines and test inputs appropriate for the environment.
 
-```moon
-let line = "🦊 INFO user=山田42 action=login"
-let user_pattern = "user=([\\p{L}\\p{M}\\p{N}_]+)"
-let limits = @arachne.CompileLimits::standard()
-  .with_max_pattern_scalars(256)
-  .with_max_nfa_states(4096)
-match @arachne.Regex::compile_with_limits(user_pattern, limits) {
-  Ok(regex) =>
-    match regex.find(line) {
-      Some(span) => span.text(line)
-      None => ""
-    }
-  Err(_) => ""
-}
+## Quick start
+
+Add Arachne to a MoonBit project after publishing:
+
+```sh
+moon add wallll-wal6/arachne
 ```
 
-## Current syntax
+Run a set of golden cases against the bundled official-engine adapter:
 
-| Pattern form | Meaning |
-| --- | --- |
-| `a` | Literal character |
-| `.` | Any single character |
-| `ab` | Concatenation |
-| `a|b` | Alternation |
-| `(ab)` | Numbered capture group |
-| `a*`, `a+`, `a?` | Zero-or-more, one-or-more, optional |
-| `[abc]`, `[a-z]`, `[^0-9]` | Character class, inclusive range, negated class |
-| `a{2}`, `a{2,}`, `a{2,4}` | Exact, lower-bounded, bounded repetition |
-| `^`, `$` | Beginning and end of the input |
-| `\.` | Escaped literal metacharacter |
-| `\d`, `\w`, `\s` | ASCII digit, word, and whitespace categories |
-| `\D`, `\W`, `\S` | Complements of the shorthand categories |
-| `\p{L}`, `\p{Lu}`, `\p{N}` | Unicode general categories and category groups |
-| `\P{M}` | Complement of a Unicode general category |
-| `\n`, `\r`, `\t`, `\v` | Line-feed, carriage-return, tab, and vertical tab |
-| `\b`, `\B` | ASCII word boundary and its complement |
-
-Inside a class, `\` escapes the next character; escape `]`, `-`, `^`, or `\` to use them literally. Shorthand categories and Unicode properties can also appear in classes, but cannot be range endpoints. A `-` at the end of a class is literal. Empty classes and descending ranges are errors. Empty groups and empty alternation branches are supported. Repetition counts are limited to 1000 and the upper bound must be at least the lower bound. Patterns are limited to 1024 Unicode scalar values, 128 nested groups, 256 capture groups, and 65,536 compiled NFA states. A `RegexSet` accepts up to 1024 patterns and 65,536 aggregate NFA states. These limits bound compilation and set storage. Captures are numbered by opening-parenthesis order. Backreferences are not implemented.
-
-## Use
-
-The Mooncakes release is not published yet. From a checkout, run `moon test` to verify the library. After publication, install it in another MoonBit project with `moon add wallll-wal6/arachne`, then compile and run:
-
-```moon
-match @arachne.Regex::compile("^(ab|cd)+$") {
-  Ok(regex) => regex.full_match("abcd")
-  Err(_) => false
-}
-```
-
-Unicode-aware field extraction:
-
-```moon
-match @arachne.Regex::compile("user=([\\p{L}\\p{M}\\p{N}_]+)") {
-  Ok(regex) => match regex.captures("🦊 INFO user=山田42 action=login") {
-    Some(captures) => captures.text(1, "🦊 INFO user=山田42 action=login")
-    None => None
+```moonbit
+let cases = [
+  @arachne.ContractCase::expect_match(
+    id="tenant-field",
+    pattern="user=([A-Za-z0-9_]+)",
+    input="INFO user=wal6 action=login",
+    text="user=wal6",
+    captures=[Some("wal6")],
+  ),
+  @arachne.ContractCase::expect_no_match(
+    id="reject-empty-user",
+    pattern="user=([A-Za-z0-9_]+)",
+    input="INFO user= action=login",
+  ),
+]
+let engine = @arachne.moonbit_regexp_adapter()
+let report = @arachne.run_contracts(cases, [engine], "moonbitlang/regexp")
+match report {
+  Ok(result) => {
+    println(result.summary())
+    println(result.format_findings())
   }
-  Err(_) => None
+  Err(error) => println("invalid contract configuration: \{error}")
 }
 ```
 
-The public API provides `Regex::compile`, `Regex::compile_with_limits`, `Regex::full_match`, `Regex::find`, `Regex::find_all`, `Regex::captures`, `Regex::replace_first`, `Regex::replace_all`, `Regex::replace_n`, `Regex::split`, `Regex::splitn`, `Regex::contains`, and `Regex::pattern`. `Regex::nfa_state_count` and `Regex::capture_group_count` expose compiled resource counts. `CompileLimits::standard` returns implementation ceilings; its `with_max_*` methods let an application lower individual limits. `parse_with_limits` applies pattern-length, nesting, capture, and repetition budgets; NFA-state budgets are checked by `Regex::compile_with_limits`, and RegexSet pattern/aggregate budgets by `RegexSet::compile_with_limits`. `RegexSet` compiles multiple rules and returns all matching rule indexes, useful for categorizing log lines or routing requests. `Match::text` extracts a match span, `Captures::group` returns a numbered capture, and `Captures::text` extracts its text. Group zero is the complete match; optional groups that did not participate return `None`. Repeated groups report their last participating iteration. `parse` is public when callers need the syntax tree directly. `find_all` and replacement use non-overlapping leftmost-longest matches. Empty matches advance by one input character; `split` retains empty fields at boundaries. Replacement strings support `$0` through `$n`, `${n}`, and `$$`.
+For cross-engine checks, create another `EngineAdapter`. Its compile callback calls the candidate engine and returns a `CompiledMatcher`; the matcher callback converts that engine's result to `MatchObservation`. Normalize start and end to zero-based MoonBit `StringView` code-unit offsets before comparing. The [adapter contract](DESIGN.md#engine-adapter-contract) describes this boundary.
 
-`find` returns the leftmost match and, at that start position, the longest possible end position. Empty matches are valid. `^` and `$` assert the boundaries of the entire input, including when searching with `find`; escape them to match literal characters. Dot matches any scalar value, including line breaks. Parsing and matching advance by Unicode scalar value, so a supplementary character such as an emoji is one regex atom. Public match offsets and substring extraction use MoonBit's UTF-16 code-unit offsets. `\p{...}` supports all Unicode General_Category abbreviations, their documented long names, and the aggregate groups `L`, `M`, `N`, `P`, `S`, `Z`, and `C`; `\P{...}` matches their complement. The generated tables target Unicode 17.0. `\w`, `\b`, and related shorthand categories use ASCII word characters. Non-capturing and named groups, lazy quantifiers, look-around, inline flags, case folding, and backreferences are not implemented.
+## Unicode category corpus
+
+`unicode_category_cases(category="Lu", max_cases=128)` creates bounded test fixtures from the generated Unicode 17.0 table. Positive cases exercise the start/end of category ranges; adjacent negative cases exercise transitions out of the category. Surrogate code points are skipped because they are not Unicode scalar values. Unknown categories and invalid limits return an error.
+
+The corpus is a boundary-focused regression aid, not an exhaustive test of every scalar value. Engines may ship different Unicode versions; report differences rather than assuming one version is universally correct. Generation steps and the Unicode data license are in [tools/README.md](tools/README.md) and [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt).
 
 ## Development
 
-This is a MoonBit module managed by `moon.mod`. Build it with:
-
 ```sh
-moon check
+moon check --deny-warn
+moon test
+moon build
+moon info
 ```
 
-Run the suite with `moon test`. The source is kept at the package root so the parser, AST, and NFA engine can be read together. See [DESIGN.md](DESIGN.md) for the execution model and its limits.
+The test suite covers adapter normalization, cache reuse behavior, expected outcomes, compile and execution differences, capture/span drift, invalid suite configuration, and Unicode boundary fixture construction.
 
-The Unicode category tables in [unicode_data.mbt](unicode_data.mbt) are generated from Unicode 17.0 `UnicodeData.txt`; regeneration steps are in [tools/README.md](tools/README.md). The upstream data license is included in [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt).
+## Scope
+
+Arachne is a compatibility-test library above regex engines. It complements engine projects by exercising their observable behavior against shared fixtures; it is not an alternative matcher and does not claim that a MoonBit regex engine or compatibility checker is absent elsewhere.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE). Unicode category range data is separately covered by [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt).
