@@ -1,6 +1,12 @@
 # Arachne
 
-A small regular-expression engine written in pure MoonBit. It parses a pattern into an AST, compiles the tree into a Thompson NFA, and matches with a bounded lazy DFA cache of NFA state subsets.
+A MoonBit-native regular-expression library for Unicode text processing. Arachne parses patterns into an AST and compiles them to a Thompson NFA. Its public API works with MoonBit `String`, matches Unicode scalar values, and returns UTF-16 code-unit spans that can be used with MoonBit string slicing. Matching uses explicit pattern and state budgets; it does not rely on backtracking.
+
+## Intended fit
+
+Arachne is a focused option for applications that need a reusable `String`-based API for searching, extracting, replacing, splitting, or routing multilingual text. Examples include log-field extraction with Unicode letter and number categories, lightweight source scanning, and rule-based text classification. Its matching contract is leftmost-longest: at the earliest start position, the longest match wins regardless of alternation order. This is useful when selecting operators or tokens such as `=` and `==`.
+
+MoonBit already provides regex syntax and the ecosystem includes other regex projects, so Arachne is not presented as the only regex option or as a replacement for every dialect. Its scope is one documented syntax with MoonBit `String` semantics, scalar-aware scanning, stable UTF-16 spans, bounded compilation, and a small set of text-processing APIs. For a feature-by-feature comparison and the cases where another option is a better fit, see [Positioning](docs/positioning.md).
 
 ## Current syntax
 
@@ -33,6 +39,18 @@ Add the module to a MoonBit project, then compile and run:
 match @arachne.Regex::compile("^(ab|cd)+$") {
   Ok(regex) => regex.full_match("abcd")
   Err(_) => false
+}
+```
+
+Unicode-aware field extraction:
+
+```moon
+match @arachne.Regex::compile("user=([\\p{L}\\p{M}\\p{N}_]+)") {
+  Ok(regex) => match regex.captures("🦊 INFO user=山田42 action=login") {
+    Some(captures) => captures.text(1, "🦊 INFO user=山田42 action=login")
+    None => None
+  }
+  Err(_) => None
 }
 ```
 

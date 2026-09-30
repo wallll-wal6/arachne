@@ -118,6 +118,21 @@ test "Unicode general categories match multilingual text" {
 }
 
 ///|
+test "Unicode property captures extract multilingual log fields" {
+  let input = "🦊 INFO user=山田42 action=login"
+  let found = regex("user=([\\p{L}\\p{M}\\p{N}_]+)").captures(input)
+  match found {
+    Some(captures) => {
+      assert_eq(captures.text(1, input), Some("山田42"))
+      // The prefix contains a supplementary scalar, so the public offset is
+      // measured in UTF-16 code units for direct MoonBit string slicing.
+      assert_eq(captures.group(1), Some({ start: 13, end: 17, }))
+    }
+    None => abort("expected user field capture")
+  }
+}
+
+///|
 test "groups and precedence" {
   assert_true(regex("(ab|cd)e").full_match("abe"))
   assert_true(regex("(ab|cd)e").full_match("cde"))
@@ -144,6 +159,13 @@ test "find returns the leftmost, longest match" {
   assert_eq(regex("a").find("xyz"), None)
   assert_eq(regex("a|ab").find("ab"), Some({ start: 0, end: 2, }))
   assert_eq(regex("").find("abc"), Some({ start: 0, end: 0, }))
+}
+
+///|
+test "leftmost-longest selection supports operator tokenization" {
+  // The longer operator wins even though its branch appears second.
+  assert_eq(regex("=|==").find("==>"), Some({ start: 0, end: 2, }))
+  assert_eq(regex("==|=").find("=>"), Some({ start: 0, end: 1, }))
 }
 
 ///|
