@@ -26,6 +26,8 @@ jobs:
         run: moon check --deny-warn
       - name: Run tests
         run: moon test
+      - name: Run cross-engine demo
+        run: moon run examples/demo
       - name: Run native tests
         run: moon test --target native
       - name: Verify public interface

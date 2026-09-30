@@ -61,6 +61,16 @@ match report {
 }
 ```
 
+From a checkout, run the real two-engine example with:
+
+```sh
+moon run examples/demo
+```
+
+It executes one shared request-ID contract and one backreference probe. The
+program prints the comparison report and exits normally so the finding can be
+reviewed as a compatibility decision rather than treated as a test failure.
+
 For cross-engine checks over ASCII fixtures, use both real adapters directly:
 
 ```moonbit
