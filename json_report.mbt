@@ -135,7 +135,42 @@ pub fn CompatibilityReport::format_json(self : CompatibilityReport) -> String {
 
 ///|
 pub fn ReportJsonV1::stringify(self : ReportJsonV1) -> String {
-  ToJson::to_json(self).stringify()
+  let output = StringBuilder()
+  write_report_json(ToJson::to_json(self), output)
+  output.to_string()
+}
+
+///|
+// Sort every object's keys explicitly rather than relying on Map iteration.
+// Arrays retain contract order; the core JSON library owns scalar encoding.
+fn write_report_json(value : Json, output : StringBuilder) -> Unit {
+  match value {
+    Object(members) => {
+      let keys = members.iter().map(pair => pair.0).to_array()
+      keys.sort_by((left, right) => left.lexical_compare(right))
+      output.write_char('{')
+      for index, key in keys {
+        if index > 0 {
+          output.write_char(',')
+        }
+        output.write_string(key.to_json().stringify())
+        output.write_char(':')
+        write_report_json(members[key], output)
+      }
+      output.write_char('}')
+    }
+    Array(values) => {
+      output.write_char('[')
+      for index, element in values {
+        if index > 0 {
+          output.write_char(',')
+        }
+        write_report_json(element, output)
+      }
+      output.write_char(']')
+    }
+    _ => output.write_string(value.stringify())
+  }
 }
 
 ///|

@@ -68,6 +68,17 @@ without changing these meanings; consumers should ignore unknown object keys.
 JSON object key order, indentation, and escape spelling are not contractual:
 parse JSON before comparing it. Array order and string values are contractual.
 
+The current report formatter explicitly sorts object keys lexicographically
+at every level and emits compact JSON. It delegates string escaping and scalar
+encoding to the core JSON library, preserving all control characters, quotes,
+backslashes, and Unicode values on a parse round trip. Given the same report
+values and toolchain, repeated formatting is byte-identical; deterministic
+adapters also produce identical reports on repeated contract runs. This is not
+a canonical JSON standard or a guarantee of identical adapter error messages
+and escape spellings across dependency/toolchain upgrades. `ToJson::to_json`
+exposes the same model values; callers serializing that value themselves choose
+their own formatting.
+
 Diagnostic text comes from the comparison layer and the selected adapters.
 Use `kind` and `status` for program logic; do not parse prose or assume error
 messages remain unchanged across dependency upgrades. Pin dependencies and

@@ -1,4 +1,233 @@
 ///|
+test "JSON serialization fixes nested key order and preserves array order" {
+  let report : @arachne.CompatibilityReport = {
+    baseline_id: "z-baseline",
+    case_count: 1,
+    engine_count: 1,
+    runs: [
+      {
+        case_id: "z-case",
+        engine_id: "z-baseline",
+        outcome: @arachne.EngineOutcome::Completed(
+          Some({
+            text: "",
+            start: 0,
+            end: 0,
+            captures: [Some("z"), None, Some("a")],
+          }),
+        ),
+      },
+    ],
+    findings: [
+      {
+        case_id: "z-case",
+        engine_id: "absent",
+        kind: @arachne.FindingKind::ExpectationFailed,
+        detail: "probe",
+      },
+    ],
+  }
+  let expected =
+    #|{"baseline_id":"z-baseline","case_count":1,"compatible":false,"engine_count":1,"findings":[{"actual":null,"baseline":{"error":null,"observation":{"captures":["z",null,"a"],"end":0,"start":0,"text":""},"status":"matched"},"case_id":"z-case","detail":"probe","engine_id":"absent","kind":"expectation"}],"runs":[{"case_id":"z-case","engine_id":"z-baseline","outcome":{"error":null,"observation":{"captures":["z",null,"a"],"end":0,"start":0,"text":""},"status":"matched"}}],"schema_version":1}
+  assert_eq(report.format_json(), expected)
+  assert_eq(report.json_v1().stringify(), expected)
+  assert_eq(@json.parse(expected), ToJson::to_json(report.json_v1()))
+}
+
+///|
+test "JSON round trips all control characters in identifiers errors and matches" {
+  let probe = "\"\\/猫🦊\u{0000}\u{0001}\u{0002}\u{0003}\u{0004}\u{0005}\u{0006}\u{0007}\u{0008}\u{0009}\u{000A}\u{000B}\u{000C}\u{000D}\u{000E}\u{000F}\u{0010}\u{0011}\u{0012}\u{0013}\u{0014}\u{0015}\u{0016}\u{0017}\u{0018}\u{0019}\u{001A}\u{001B}\u{001C}\u{001D}\u{001E}\u{001F}\u{2028}\u{2029}"
+  let baseline_id = probe + "baseline"
+  let report : @arachne.CompatibilityReport = {
+    baseline_id,
+    case_count: 1,
+    engine_count: 2,
+    runs: [
+      {
+        case_id: probe,
+        engine_id: baseline_id,
+        outcome: @arachne.EngineOutcome::Completed(
+          Some({
+            text: probe,
+            start: 0,
+            end: probe.length(),
+            captures: [Some(probe), None, Some("")],
+          }),
+        ),
+      },
+      {
+        case_id: probe,
+        engine_id: probe,
+        outcome: @arachne.EngineOutcome::ExecutionFailed(probe),
+      },
+    ],
+    findings: [
+      {
+        case_id: probe,
+        engine_id: probe,
+        kind: @arachne.FindingKind::ExecutionDiff,
+        detail: probe,
+      },
+    ],
+  }
+  let encoded = report.format_json()
+  let observation : Json = {
+    "text": probe.to_json(),
+    "start": 0,
+    "end": probe.length().to_json(),
+    "captures": [probe.to_json(), null, ""],
+  }
+  let baseline : Json = {
+    "status": "matched",
+    "error": null,
+    "observation": observation,
+  }
+  let actual : Json = {
+    "status": "execution_failed",
+    "error": probe.to_json(),
+    "observation": null,
+  }
+  assert_eq(@json.parse(encoded), {
+    "schema_version": 1,
+    "baseline_id": baseline_id.to_json(),
+    "case_count": 1,
+    "engine_count": 2,
+    "compatible": false,
+    "runs": [
+      {
+        "case_id": probe.to_json(),
+        "engine_id": baseline_id.to_json(),
+        "outcome": baseline,
+      },
+      {
+        "case_id": probe.to_json(),
+        "engine_id": probe.to_json(),
+        "outcome": actual,
+      },
+    ],
+    "findings": [
+      {
+        "case_id": probe.to_json(),
+        "engine_id": probe.to_json(),
+        "kind": "execution",
+        "detail": probe.to_json(),
+        "baseline": baseline,
+        "actual": actual,
+      },
+    ],
+  })
+  for iteration = 0; iteration < 3; iteration = iteration + 1 {
+    assert_eq(report.format_json(), encoded)
+  }
+}
+
+///|
+test "JSON runner preserves every difference kind and formats without execution" {
+  let mut compile_calls = 0
+  let mut observe_calls = 0
+  fn adapter(id : String) -> @arachne.EngineAdapter {
+    @arachne.EngineAdapter::new(id~, compile=pattern => {
+      compile_calls += 1
+      if id == "candidate" && pattern == "compile" {
+        Err("compile: \"猫\"\\\n")
+      } else {
+        Ok(
+          @arachne.CompiledMatcher::new(observe=_input => {
+            observe_calls += 1
+            if id == "candidate" && pattern == "execute" {
+              Err("execute: \"🦊\"\\\r\t")
+            } else if id == "baseline" && pattern == "presence" {
+              Ok(None)
+            } else if id == "candidate" && pattern == "values" {
+              Ok(
+                Some({
+                  text: "right",
+                  start: 1,
+                  end: 6,
+                  captures: [Some(""), None],
+                }),
+              )
+            } else {
+              Ok(
+                Some({
+                  text: "left",
+                  start: 0,
+                  end: 4,
+                  captures: [None, Some("")],
+                }),
+              )
+            }
+          }),
+        )
+      }
+    })
+  }
+  let cases = [
+    @arachne.ContractCase::new(id="compile", pattern="compile", input=""),
+    @arachne.ContractCase::new(id="execute", pattern="execute", input=""),
+    @arachne.ContractCase::new(id="presence", pattern="presence", input=""),
+    @arachne.ContractCase::new(id="values", pattern="values", input=""),
+    @arachne.ContractCase::expect_no_match(
+      id="expected",
+      pattern="expected",
+      input="",
+    ),
+  ]
+  // Candidate first also exercises context lookup with a later baseline.
+  let engines = [adapter("candidate"), adapter("baseline")]
+  let report = @arachne.run_contracts(cases, engines, "baseline").unwrap()
+  assert_eq(compile_calls, 10)
+  assert_eq(observe_calls, 9)
+  let model = report.json_v1()
+  assert_eq(model.findings.map(finding => finding.kind), [
+    "compile-acceptance", "execution", "match-presence", "matched-text", "match-span",
+    "captures", "expectation", "expectation",
+  ])
+  assert_eq(model.runs[0].outcome.status, "compile_rejected")
+  assert_eq(model.runs[0].outcome.error, Some("compile: \"猫\"\\\n"))
+  assert_eq(model.runs[2].outcome.status, "execution_failed")
+  assert_eq(model.runs[2].outcome.error, Some("execute: \"🦊\"\\\r\t"))
+  assert_eq(ToJson::to_json(model.runs[5].outcome), {
+    "status": "no_match",
+    "error": null,
+    "observation": null,
+  })
+  for index, finding in model.findings {
+    assert_eq(finding.detail, report.findings[index].detail)
+    let candidate_index = if index < 3 {
+      index * 2
+    } else if index < 6 {
+      6
+    } else {
+      8
+    }
+    assert_eq(
+      ToJson::to_json(finding.baseline.unwrap()),
+      ToJson::to_json(model.runs[candidate_index + 1].outcome),
+    )
+    let actual_index = if index == 7 { 9 } else { candidate_index }
+    assert_eq(
+      ToJson::to_json(finding.actual.unwrap()),
+      ToJson::to_json(model.runs[actual_index].outcome),
+    )
+  }
+  let encoded = report.format_json()
+  for iteration = 0; iteration < 3; iteration = iteration + 1 {
+    assert_eq(report.format_json(), encoded)
+    assert_eq(model.stringify(), encoded)
+  }
+  assert_eq(@json.parse(encoded), ToJson::to_json(model))
+  assert_eq(compile_calls, 10)
+  assert_eq(observe_calls, 9)
+  for iteration = 0; iteration < 3; iteration = iteration + 1 {
+    let repeated = @arachne.run_contracts(cases, engines, "baseline").unwrap()
+    assert_eq(repeated.format_json(), encoded)
+  }
+  assert_eq(compile_calls, 40)
+  assert_eq(observe_calls, 36)
+}
+
+///|
 test "JSON v1 has a versioned empty report shape" {
   let report = @arachne.run_contracts(
     [],
