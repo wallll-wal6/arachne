@@ -1,5 +1,12 @@
 # Arachne
 
+**申报定位：Arachne 是基于公开 MoonBit 正则引擎构建的行为契约 / 兼容性测试项目。**
+自有代码负责契约、适配、比较与报告；解析及匹配由 `moonbitlang/regexp@0.3.5`
+和 `walkzzz/re-mbt@0.1.0` 提供，不能将这些依赖能力申报为 Arachne 自研引擎。
+现有[十月申报书草案](docs/2026-10-hackathon-application-draft.md)、
+[代码边界与已测能力](docs/positioning.md)及[本次整改记录](docs/initial-review-2026-10-13.md)
+已按代码核对；全部修订仍**待韦安良复核**，九月申报和驳回原文尚未找到。
+
 Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 
 Arachne does not implement a regex syntax, parser, or matching engine. Its first-party adapters call the official [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt) package and the Perl frontend of [`walkzzz/re-mbt`](https://github.com/walkzzz/re-mbt). The re-mbt adapter is deliberately limited to ASCII patterns and inputs because that backend exposes byte-oriented APIs; it refuses non-ASCII data rather than guessing at offset conversion. Applications can add adapters for another engine or a newer engine version without copying either implementation.
@@ -165,7 +172,9 @@ not update expected files or decide which findings an application may accept.
 
 Arachne is a compatibility-test library above regex engines. It complements engine projects by exercising their observable behavior against shared fixtures; it is not an alternative matcher. Its concrete integration with two independently implemented MoonBit engines reports differences in syntax acceptance and match results, while caller-owned contracts let applications pin the behavior they rely on.
 
-Arachne is an individual project developed and maintained by 韦安良. Its own
+韦安良 is the applicant named in this remediation request; the existing
+individual-project and independent-maintenance disclosure remains pending his
+review. Its own
 MoonBit contract runner, adapters, fixtures, and reporting code are separate
 from the publicly distributed `moonbitlang/regexp@0.3.5` and
 `walkzzz/re-mbt@0.1.0` dependencies declared in `moon.mod`. The dependencies

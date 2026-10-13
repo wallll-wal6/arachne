@@ -8,24 +8,28 @@ deterministic findings.
 
 ## Competition disclosure
 
-The existing application draft records a September review concern about
-describing Arachne as a self-developed regular-expression engine. That
-description does not match the current repository. The current project is a
+The 2026-10-13 remediation request identifies the September review concern:
+Arachne must be described as a behavior-contract / compatibility-testing project
+built on public MoonBit regex engines. Describing it as a self-developed
+regular-expression engine does not match the current repository. The project is a
 behavior-contract and regression-testing library; it does not parse regular
 expressions or perform matching. The original September application and review
 are not included here, so their exact wording must be confirmed by the applicant
-before submission.
+before submission. All revisions and capability statements in this document are
+**待韦安良复核 / pending Wei Anliang's review**; Codex's code inspection and local
+checks do not record human approval.
 
 The module declares `moonbitlang/regexp@0.3.5` and `walkzzz/re-mbt@0.1.0`
 as direct dependencies in `moon.mod`.
 Its adapters call those packages and translate their observed results into a
 shared contract format. The matcher implementations remain in their upstream
 repositories; Arachne neither vendors nor modifies them in this repository.
-The `re-mbt` adapter is intentionally limited to ASCII inputs because the
+The `re-mbt` adapter is intentionally limited to ASCII patterns and inputs because the
 upstream interface reports byte offsets.
 
-The Arachne project is an individual project developed and maintained by
-韦安良. Upstream package maintainers are not Arachne team members merely
+The existing application identifies 韦安良 as the individual developer and
+maintainer; that staffing and authorship disclosure is pending his review.
+Upstream package maintainers are not Arachne team members merely
 because Arachne depends on or calls their public packages. The repository
 history and dependency declarations show integration through public packages;
 they do not by themselves establish joint development or maintenance.
@@ -46,6 +50,49 @@ The generator `tools/generate_unicode.mjs` produces `unicode_data.mbt` from
 Unicode data: that generated range table is separately licensed data, not
 an original matching algorithm. Source paths and dependency imports make
 these responsibilities reviewable without attributing upstream work to Arachne.
+
+### Code and dependency evidence
+
+“First-party” identifies repository responsibilities, not proof of entirely
+manual authorship or of the applicant's historical upstream contributions.
+
+| Repository file / public dependency | Actual responsibility and boundary |
+| --- | --- |
+| `contract.mbt` | Contract cases, golden expectations, per-run compile reuse, baseline comparison and text findings; the official adapter calls `@regexp.compile` and `execute`, then reads match text/captures and computes the whole-match span |
+| `rembt_adapter.mbt` | Reject non-ASCII patterns/inputs; call `@rembt.Perl::compile_pat` and `exec_opt`, then normalize `GroupT` capture text and offsets |
+| `json_report.mbt` | Build and serialize JSON v1 observations/findings; does not match patterns |
+| `tools/generate_unicode.mjs`, `unicode_data.mbt` | Generate Unicode 17.0 category ranges and bounded scalar fixtures; the range data is separately licensed, not an original regex algorithm |
+| `contract_test.mbt`, `json_report_test.mbt`, `examples/migration-fixtures/*`, `tools/verify-demo.mjs` | Regression tests, shared real-engine demo fixtures, text/JSON snapshot and repeat-output checks |
+| `moonbitlang/regexp@0.3.5` | Direct public module dependency; imported as `moonbitlang/regexp` in `moon.pkg`; parser and matcher come from [regexp.mbt](https://github.com/moonbitlang/regexp.mbt) |
+| `walkzzz/re-mbt@0.1.0` | Separate direct public module dependency; `walkzzz/re-mbt/re` imported as `@rembt`; parser and matcher come from [re-mbt](https://github.com/walkzzz/re-mbt), an upstream port of ocaml-re; Arachne calls only its Perl frontend |
+
+These are two public backend integrations, not Arachne implementations of their
+engines. The locally resolved package manifests match the declared versions.
+The re-mbt manifest also declares `moonbitlang/x@0.4.48` as its dependency;
+Arachne's direct imports do not turn this transitive package into first-party work.
+No Arachne contribution to either upstream or joint-maintenance relationship is
+established by these imports. The upstream feature lists are not an Arachne
+acceptance result, and Arachne does not claim to verify every frontend.
+
+### Capability observations from this remediation run
+
+On 2026-10-13, Codex ran default and JS `moon check --deny-warn`,
+`moon test --deny-warn` (24 passed on each target), and `verify-demo.mjs` against
+the current checkout. Both demos matched their checked-in text/JSON snapshots
+and repeated identically. See the [run record](initial-review-2026-10-13.md)
+for exact commands and responsibility disclosure.
+
+| Real fixture suite | Observed result | Limit of the evidence |
+| --- | --- | --- |
+| `shared-ascii` | Five cases, two backends, zero findings; includes whole-match spans, unmatched optional capture and empty capture | Only the selected ASCII patterns/inputs |
+| `syntax-difference` | `^([a-z])\1$` with `aa`: official backend compiles and matches; re-mbt Perl rejects compilation; one compile-acceptance finding | This fixture at these versions, not a universal syntax-equivalence result |
+| `adapter-domain` | Non-ASCII pattern yields compile rejection; non-ASCII input yields execution failure in the ASCII adapter; two findings | Explicit Arachne adapter restriction, not evidence that all re-mbt frontends cannot process such data |
+| `unicode-official-only` | Six cases, official backend only, zero findings; BMP literal, supplementary-prefix span `[2, 3)`, and four `Lu` boundary cases | No cross-engine Unicode verification, no exhaustive category coverage |
+
+The public adapters expose a single whole-match observation with numeric capture
+text. They do not expose every match, named-group maps or capture-group spans.
+The reported offset unit is zero-based MoonBit `StringView` code units
+(UTF-16 in these checks), not byte offsets or Unicode scalar indices.
 
 This makes the project useful when an application changes regex backends, wraps
 a backend behind its own API, or needs to pin behavior across dependency

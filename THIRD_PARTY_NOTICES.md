@@ -2,7 +2,9 @@
 
 ## Ownership and integration boundary
 
-Arachne is developed and maintained independently by 韦安良. Its contract
+The existing application identifies 韦安良 as Arachne's individual developer
+and maintainer; this disclosure is **待韦安良复核 / pending his review**.
+Its contract
 runner and adapter code call public dependency APIs; upstream maintainers are
 not Arachne team members. This integration makes no claim of upstream
 contributions, joint development, or joint maintenance. Direct versions below
