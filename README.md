@@ -6,6 +6,8 @@
 现有[十月申报书草案](docs/2026-10-hackathon-application-draft.md)、
 [代码边界与已测能力](docs/positioning.md)及[本次整改记录](docs/initial-review-2026-10-13.md)
 已按代码核对；全部修订仍**待韦安良复核**，九月申报和驳回原文尚未找到。
+当前申报与前三项提交证据汇总见[初审证据索引](docs/review-evidence-2026-10-13.md)；
+各阶段的测试数量与 CI 状态保留其实际日期和提交范围。
 
 Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 

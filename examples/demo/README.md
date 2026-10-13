@@ -76,6 +76,23 @@ any difference with the application owner before editing the expected files.
 Pinned dependencies reproduce these particular observations; they are not
 a general guarantee about all releases or inputs.
 
+## Apply the example to a migration
+
+1. Record the application-owned pattern/input fixtures, required text/captures
+   and UTF-16 spans, baseline/candidate IDs, dependency versions and toolchain.
+   The demo's four suites are synthetic examples, not an application's acceptance set.
+2. Check that every fixture is inside each adapter's domain. Run shared ASCII
+   cases through both bundled adapters; keep official-only Unicode cases separate.
+3. Run the commands above and save actual output with
+   `node tools/verify-demo.mjs default artifacts/migration-review` (or `js`).
+   Inspect every `outcome`, including errors, before reading `compatible`.
+4. For each finding, review both sides, the golden requirement, and whether
+   the difference is syntax support, an adapter refusal, or observed matching.
+   An application owner must explicitly accept any permitted difference.
+5. Change application-owned fixtures/expectations only after that decision,
+   rerun, and retain the reports with the reviewed commit and decision separately.
+   The verifier never updates goldens and does not record human approval.
+
 ## Adapter and Unicode limits
 
 `rembt_ascii_perl_adapter` accepts only ASCII **pattern strings and input
