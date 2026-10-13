@@ -27,10 +27,12 @@ own packages; this repository does not vendor them. See the
 [re-mbt source](https://github.com/walkzzz/re-mbt) and
 [third-party notices](../THIRD_PARTY_NOTICES.md).
 
-Repository responsibilities do not establish entirely manual authorship.
-Calling public APIs does not establish joint development, joint maintenance,
-team membership or an applicant's upstream contributions. Confirmed upstream
-contributions must be disclosed separately with verifiable links and scope.
+Arachne's owner and sole team member is Wei Anliang (韦安良), as he confirmed
+in the project conversation. The maintainers of `moonbitlang/regexp` and
+`walkzzz/re-mbt` are not Arachne team members. Both engines are public
+dependencies; this application claims no joint development, joint maintenance
+or upstream contributions. Repository responsibilities do not establish
+entirely manual authorship.
 
 ## Adapter contract
 
@@ -90,6 +92,10 @@ finding. The owner defines required behavior, permitted differences and the
 final migration decision. The report does not record human approval.
 
 The project goal and positioning were defined by the human owner. AI assists
-with inspection and changes. Team composition, personal contributions,
-historical AI use and competition requirements remain for the owner to
-confirm in the [application disclosure](2026-10-disclosure.md).
+with inspection and changes. The [application disclosure](2026-10-disclosure.md)
+records the sole-member team, dependency boundary and September positioning
+issue. The rejection-notice screenshot supplied in the conversation establishes
+the stated mismatch between an engine application and a behavior-contract
+testing repository. A historical September Markdown application is available;
+the complete submitted online form and its final attachment version have not
+been obtained, so neither is reconstructed from the screenshot.

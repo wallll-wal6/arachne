@@ -4,9 +4,11 @@
 本仓库实现契约、适配、比较与报告；正则解析及匹配由公开依赖
 `moonbitlang/regexp@0.3.5` 和 `walkzzz/re-mbt@0.1.0` 提供。
 项目目标与定位由人工明确，AI 辅助检查和修改。
+负责人及唯一团队成员为韦安良；两套公开依赖的维护者不是 Arachne
+团队成员，依赖接入不表示共同开发或上游贡献。
 [十月申报正文](docs/2026-10-hackathon-application-draft.md)与
-[项目边界](docs/positioning.md)说明实现职责；团队、个人贡献、完整 AI 使用和
-赛期归属等待负责人韦安良复核的事项见[披露附表](docs/2026-10-disclosure.md)。
+[项目边界](docs/positioning.md)说明实现职责；依赖、团队与历史定位说明见
+[披露附表](docs/2026-10-disclosure.md)。
 
 Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 
@@ -153,8 +155,8 @@ acceptance.
 `unicode_category_cases(category="Lu", max_cases=128)` creates bounded test fixtures from the range table labelled Unicode 17.0. Positive cases exercise the start/end of category ranges; adjacent negative cases exercise transitions out of the category. Surrogate code points are skipped because they are not Unicode scalar values. Unknown categories and invalid limits return an error.
 
 The generator labels its output as Unicode 17.0 but accepts an external input
-file. Confirming the original input version requires a provenance record; this
-is listed for owner review in the [disclosure](docs/2026-10-disclosure.md).
+file. The original input version lacks an independent provenance record, as
+documented in the [disclosure](docs/2026-10-disclosure.md).
 
 The corpus is a boundary-focused regression aid, not an exhaustive test of every scalar value. Engines may ship different Unicode versions; report differences rather than assuming one version is universally correct. Generation steps and the Unicode data license are in [tools/README.md](tools/README.md) and [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt).
 

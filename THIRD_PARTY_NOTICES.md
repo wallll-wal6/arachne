@@ -4,7 +4,9 @@
 
 The contract runner, adapters, comparison and reports belong to this
 repository. They call public dependency APIs; parsing and matching belong to
-the engine dependencies. Dependency use does not establish team membership.
+the engine dependencies. Arachne's owner and sole team member is Wei Anliang
+(韦安良). The maintainers of these public dependencies are not Arachne team
+members.
 This integration makes no claim of upstream
 contributions, joint development, or joint maintenance. Direct versions below
 are recorded in `moon.mod`; package imports are recorded in `moon.pkg`.
@@ -31,8 +33,8 @@ for the complete terms. Arachne's own source remains under the license in
 
 `unicode_data.mbt` contains a range table labelled Unicode 17.0, used to
 construct bounded regression fixtures. The generator reads an externally
-supplied `UnicodeData.txt`; the original input version and provenance remain
-for the project owner to confirm in the [disclosure](docs/2026-10-disclosure.md).
+supplied `UnicodeData.txt`; the original input version lacks an independent
+provenance record, as stated in the [disclosure](docs/2026-10-disclosure.md).
 The table is not
 an Arachne regex engine implementation. Its separate notice is in
 [`UNICODE-LICENSE.txt`](UNICODE-LICENSE.txt), and regeneration is documented in
