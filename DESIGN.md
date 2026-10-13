@@ -24,6 +24,16 @@ For each candidate engine, Arachne reports differences in compile acceptance, ex
 
 Matching compile errors or execution errors on both engines are not treated as semantic differences; the suite can still report a failed golden expectation. Error details remain adapter-provided strings. The integration suite runs common ASCII contracts through both real engines and includes a backreference case: the official regexp backend accepts and matches it, while re-mbt's Perl frontend rejects it. Arachne reports that as a compile-acceptance difference. This demonstrates a concrete migration/release-audit use case; it does not imply either backend is wrong. No claim is made that a finite fixture corpus proves equivalence beyond the tested inputs.
 
+## JSON report model
+
+`ReportJsonV1` projects the existing report into a versioned wire model without
+changing contract validation, comparison rules, or adapter behavior. It uses
+explicit status and finding labels rather than debug representations of enums.
+The projection copies run arrays, findings, and captures, so later changes to
+the source report do not affect its snapshot. Finding context is resolved by
+case and engine IDs, independent of baseline position in the adapter list.
+The [JSON v1 contract](docs/json-report-v1.md) defines the complete wire shape.
+
 ## Unicode boundary corpus
 
 The generated Unicode 17.0 tables store sorted, inclusive general-category ranges. `unicode_category_cases` turns each selected range boundary into a positive scalar sample and, where valid, tests the adjacent scalar outside the category. It skips surrogate code points and stops at the requested case count. This targets category transitions without running more than a million values by default.

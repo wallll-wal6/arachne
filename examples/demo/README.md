@@ -6,6 +6,8 @@ From the repository root, with MoonBit on PATH:
 moon update
 moon check --deny-warn
 moon run examples/demo
+moon run examples/demo-json
+node tools/verify-demo.mjs
 ```
 
 `moon.mod` pins `moonbitlang/regexp@0.3.5` and `walkzzz/re-mbt@0.1.0`.
@@ -25,6 +27,22 @@ non-matches, captures, spans, and rejection reasons are observable.
 An unmatched capture is `None`; a participating empty capture is `Some("")`.
 The probe suites omit shared golden expectations: their findings preserve
 observations for review without requiring both engines to accept a feature.
+
+`expected.txt` pins all text observations; `expected.json` pins the equivalent
+structured output. The JSON envelope has `demo_version: 1` and named `suites`,
+each containing the existing report v1 object. It distinguishes unmatched
+captures (`null`) from participating empty captures (`""`).
+`node tools/verify-demo.mjs` needs Node.js 22+ and runs both executables, compares
+text after newline normalization, and compares parsed JSON without depending
+on object key order. Any unexpected difference fails the regression with a
+nonzero exit, even though the demo itself displays intentional findings and
+exits normally. The command never rewrites snapshots. To verify another
+execution target, pass `js` or `native` as its final argument.
+
+When dependencies or fixtures change, inspect both engine outcomes and discuss
+any difference with the application owner before editing the expected files.
+Pinned dependencies reproduce these particular observations; they are not
+a general guarantee about all releases or inputs.
 
 ## Adapter and Unicode limits
 
@@ -60,3 +78,28 @@ implementation, documentation, and execution of regression checks; generated
 changes and snapshots still require human review. A normal demo exit displays
 the report, including expected differences. It does not approve migration or
 declare either engine wrong. This run does not claim completed human review.
+
+## Local validation, 2026-10-13
+
+Toolchain: `moon 0.1.20260827 (d0aaa07)`, `moonc v0.10.11+6ff76a5f9`,
+`moonrun 0.1.20260827`; Node.js `v24.19.0`.
+
+- First implementation commit, exported without other working-tree changes:
+  `moon update`, `moon check --deny-warn`, all 18 existing tests, and text demo
+  passed.
+- Final implementation: `moon check --deny-warn`, `moon test --deny-warn`, and
+  `moon test --target js --deny-warn` passed (22 tests per target).
+- Both executables matched the checked-in text and JSON via
+  `node tools/verify-demo.mjs` (default wasm) and `node tools/verify-demo.mjs js`.
+- In a temporary export of the staged files, extra text and an incorrect
+  Unicode start offset each made the regression fail; restored files passed.
+- `moon build`, `moon fmt`, `moon info`, and whitespace checks passed.
+- `moon test --target native --deny-warn` could not build: no C compiler
+  (`cl`, `cc`, `gcc`, or `clang`) was available. Native remains unverified locally.
+- Explicit `wasm-gc` could not build with this installation's missing target
+  standard library. The regression's default follows `moon run` rather than
+  assuming a particular target.
+
+Codex generated and checked the result files against the observed outcomes.
+Human acceptance of migration behavior remains pending; CI configuration is
+included, but remote CI has not been run and these commits are not pushed.

@@ -34,7 +34,9 @@ pub(all) struct CompatibilityReport {
 pub fn CompatibilityReport::case_count(Self) -> Int
 pub fn CompatibilityReport::engine_count(Self) -> Int
 pub fn CompatibilityReport::format_findings(Self) -> String
+pub fn CompatibilityReport::format_json(Self) -> String
 pub fn CompatibilityReport::is_compatible(Self) -> Bool
+pub fn CompatibilityReport::json_v1(Self) -> ReportJsonV1
 pub fn CompatibilityReport::summary(Self) -> String
 
 pub(all) struct CompiledMatcher {
@@ -83,11 +85,24 @@ pub fn EngineOutcome::equal(Self, Self) -> Bool
 pub fn EngineOutcome::not_equal(Self, Self) -> Bool
 pub fn EngineOutcome::to_repr(Self) -> @debug.Repr
 
+pub(all) struct EngineOutcomeJsonV1 {
+  status : String
+  error : String?
+  observation : MatchJsonV1?
+}
+pub impl ToJson for EngineOutcomeJsonV1
+
 pub(all) struct EngineRun {
   case_id : String
   engine_id : String
   outcome : EngineOutcome
 }
+
+pub(all) struct EngineRunJsonV1 {
+  case_id : String
+  engine_id : String
+  outcome : EngineOutcomeJsonV1
+} derive(ToJson)
 
 pub(all) enum ExpectedOutcome {
   ExpectedNoMatch
@@ -96,6 +111,16 @@ pub(all) enum ExpectedOutcome {
 pub fn ExpectedOutcome::equal(Self, Self) -> Bool
 pub fn ExpectedOutcome::not_equal(Self, Self) -> Bool
 pub fn ExpectedOutcome::to_repr(Self) -> @debug.Repr
+
+pub(all) struct FindingJsonV1 {
+  case_id : String
+  engine_id : String
+  kind : String
+  detail : String
+  baseline : EngineOutcomeJsonV1?
+  actual : EngineOutcomeJsonV1?
+}
+pub impl ToJson for FindingJsonV1
 
 pub(all) enum FindingKind {
   CompileAcceptanceDiff
@@ -110,6 +135,14 @@ pub fn FindingKind::equal(Self, Self) -> Bool
 pub fn FindingKind::not_equal(Self, Self) -> Bool
 pub fn FindingKind::to_repr(Self) -> @debug.Repr
 
+pub(all) struct MatchJsonV1 {
+  text : String
+  start : Int
+  end : Int
+  captures : Array[String?]
+}
+pub impl ToJson for MatchJsonV1
+
 pub(all) struct MatchObservation {
   text : String
   start : Int
@@ -119,6 +152,17 @@ pub(all) struct MatchObservation {
 pub fn MatchObservation::equal(Self, Self) -> Bool
 pub fn MatchObservation::not_equal(Self, Self) -> Bool
 pub fn MatchObservation::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ReportJsonV1 {
+  schema_version : Int
+  baseline_id : String
+  case_count : Int
+  engine_count : Int
+  compatible : Bool
+  runs : Array[EngineRunJsonV1]
+  findings : Array[FindingJsonV1]
+} derive(ToJson)
+pub fn ReportJsonV1::stringify(Self) -> String
 
 pub(all) enum UnicodeCorpusError {
   UnknownCategory(String)

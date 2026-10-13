@@ -10,3 +10,9 @@ node tools/generate_unicode.mjs UnicodeData.txt > unicode_data.mbt
 ```
 
 Review the generated diff, run `moon check --deny-warn` and `moon test`, and keep the associated data notice in [../UNICODE-LICENSE.txt](../UNICODE-LICENSE.txt). The range ordering and inclusive endpoints are part of the corpus generator's input contract.
+
+# Migration demo regression
+
+`node tools/verify-demo.mjs` runs the real text and JSON examples against their
+checked-in expected files. See the [migration walkthrough](../examples/demo/README.md)
+for dependencies, target selection, scope, and human review of differences.

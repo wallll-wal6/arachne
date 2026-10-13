@@ -28,6 +28,11 @@ jobs:
         run: moon test
       - name: Run cross-engine demo
         run: moon run examples/demo
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify migration demo text and JSON
+        run: node tools/verify-demo.mjs
       - name: Run native tests
         run: moon test --target native
       - name: Verify public interface

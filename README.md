@@ -14,7 +14,7 @@ engine projects and documents the adapter requirements and limits.
 - **Behavior drift:** compare a selected baseline against one or more candidate adapters.
 - **Golden expectations:** assert match presence, whole-match text, capture text, and—when important—normalized whole-match spans.
 - **Unicode boundary fixtures:** generate deterministic positive and adjacent-negative cases from Unicode 17.0 general-category ranges, with a caller-selected case cap.
-- **Stable reports:** preserve fixture and adapter order, and format findings for build logs.
+- **Stable reports:** preserve fixture and adapter order, format findings for build logs, and export versioned JSON for CI consumers.
 - **Compile reuse:** compile each distinct pattern once per adapter during a run, then reuse the compiled matcher for all matching cases.
 
 When callers need to pin an offset as well as text, `expect_match_span` asserts
@@ -67,9 +67,13 @@ From a checkout, run the real two-engine example with:
 moon run examples/demo
 ```
 
-It executes one shared request-ID contract and one backreference probe. The
-program prints the comparison report and exits normally so the finding can be
-reviewed as a compatibility decision rather than treated as a test failure.
+It runs five shared ASCII contracts, the existing backreference difference,
+two explicit ASCII-adapter domain probes, and six official-engine Unicode
+fixtures. Every observation is printed, including captures and spans.
+See the [reproducible migration walkthrough](examples/demo/README.md) for the
+JSON executable, expected results, regression command, Unicode sample scope,
+and UTF-16 code-unit offset convention. A normal demo exit displays findings
+for owner review; it does not approve migration.
 
 For cross-engine checks over ASCII fixtures, use both real adapters directly:
 
@@ -99,6 +103,15 @@ both sides of the compile result:
 ```text
 backreference-support-difference [walkzzz/re-mbt/Perl (ASCII)] compile-acceptance: baseline compiled the pattern; candidate rejected it
 ```
+
+## Machine-readable reports
+
+Call `result.format_json()` to export a JSON v1 report, or `result.json_v1()`
+to inspect its typed model. The document includes its schema version, counts,
+compatibility flag, every engine outcome, and findings with both baseline and
+actual outcome context. Unmatched captures and absent observations use `null`.
+See the [JSON v1 contract](docs/json-report-v1.md) for status labels, fields,
+offset conventions, and failure semantics.
 
 ## Unicode category corpus
 

@@ -1,0 +1,423 @@
+{
+  "demo_version": 1,
+  "suites": [
+    {
+      "name": "shared-ascii",
+      "report": {
+        "schema_version": 1,
+        "baseline_id": "moonbitlang/regexp",
+        "case_count": 5,
+        "engine_count": 2,
+        "compatible": true,
+        "runs": [
+          {
+            "case_id": "request-id",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "req-42",
+                "start": 0,
+                "end": 6,
+                "captures": [
+                  "42"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "request-id",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "req-42",
+                "start": 0,
+                "end": 6,
+                "captures": [
+                  "42"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "reject-empty-request-id",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "no_match",
+              "error": null,
+              "observation": null
+            }
+          },
+          {
+            "case_id": "reject-empty-request-id",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "no_match",
+              "error": null,
+              "observation": null
+            }
+          },
+          {
+            "case_id": "search-with-prefix",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "user=wal6",
+                "start": 5,
+                "end": 14,
+                "captures": [
+                  "wal6"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "search-with-prefix",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "user=wal6",
+                "start": 5,
+                "end": 14,
+                "captures": [
+                  "wal6"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "optional-unmatched-group",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "dog",
+                "start": 0,
+                "end": 3,
+                "captures": [
+                  null
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "optional-unmatched-group",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "dog",
+                "start": 0,
+                "end": 3,
+                "captures": [
+                  null
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "empty-capture",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "b",
+                "start": 0,
+                "end": 1,
+                "captures": [
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "empty-capture",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "b",
+                "start": 0,
+                "end": 1,
+                "captures": [
+                  ""
+                ]
+              }
+            }
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "name": "syntax-difference",
+      "report": {
+        "schema_version": 1,
+        "baseline_id": "moonbitlang/regexp",
+        "case_count": 1,
+        "engine_count": 2,
+        "compatible": false,
+        "runs": [
+          {
+            "case_id": "backreference-support-difference",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "aa",
+                "start": 0,
+                "end": 2,
+                "captures": [
+                  "a"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "backreference-support-difference",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "compile_rejected",
+              "error": "re-mbt Perl frontend rejected the pattern",
+              "observation": null
+            }
+          }
+        ],
+        "findings": [
+          {
+            "case_id": "backreference-support-difference",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "kind": "compile-acceptance",
+            "detail": "baseline compiled the pattern; candidate rejected it",
+            "baseline": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "aa",
+                "start": 0,
+                "end": 2,
+                "captures": [
+                  "a"
+                ]
+              }
+            },
+            "actual": {
+              "status": "compile_rejected",
+              "error": "re-mbt Perl frontend rejected the pattern",
+              "observation": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "adapter-domain",
+      "report": {
+        "schema_version": 1,
+        "baseline_id": "moonbitlang/regexp",
+        "case_count": 2,
+        "engine_count": 2,
+        "compatible": false,
+        "runs": [
+          {
+            "case_id": "non-ascii-pattern",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "猫",
+                "start": 0,
+                "end": 1,
+                "captures": []
+              }
+            }
+          },
+          {
+            "case_id": "non-ascii-pattern",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "compile_rejected",
+              "error": "adapter-domain: re-mbt Perl adapter currently accepts ASCII patterns only",
+              "observation": null
+            }
+          },
+          {
+            "case_id": "non-ascii-input",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "a",
+                "start": 2,
+                "end": 3,
+                "captures": [
+                  "a"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "non-ascii-input",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "execution_failed",
+              "error": "adapter-domain: re-mbt Perl adapter currently accepts ASCII inputs only",
+              "observation": null
+            }
+          }
+        ],
+        "findings": [
+          {
+            "case_id": "non-ascii-pattern",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "kind": "compile-acceptance",
+            "detail": "baseline compiled the pattern; candidate rejected it",
+            "baseline": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "猫",
+                "start": 0,
+                "end": 1,
+                "captures": []
+              }
+            },
+            "actual": {
+              "status": "compile_rejected",
+              "error": "adapter-domain: re-mbt Perl adapter currently accepts ASCII patterns only",
+              "observation": null
+            }
+          },
+          {
+            "case_id": "non-ascii-input",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "kind": "execution",
+            "detail": "baseline completed; candidate execution failed",
+            "baseline": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "a",
+                "start": 2,
+                "end": 3,
+                "captures": [
+                  "a"
+                ]
+              }
+            },
+            "actual": {
+              "status": "execution_failed",
+              "error": "adapter-domain: re-mbt Perl adapter currently accepts ASCII inputs only",
+              "observation": null
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "unicode-official-only",
+      "report": {
+        "schema_version": 1,
+        "baseline_id": "moonbitlang/regexp",
+        "case_count": 6,
+        "engine_count": 1,
+        "compatible": true,
+        "runs": [
+          {
+            "case_id": "bmp-literal",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "猫",
+                "start": 0,
+                "end": 1,
+                "captures": [
+                  "猫"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "supplementary-prefix-offset",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "a",
+                "start": 2,
+                "end": 3,
+                "captures": [
+                  "a"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "unicode-Lu-0",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "A",
+                "start": 0,
+                "end": 1,
+                "captures": []
+              }
+            }
+          },
+          {
+            "case_id": "unicode-Lu-1",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "no_match",
+              "error": null,
+              "observation": null
+            }
+          },
+          {
+            "case_id": "unicode-Lu-2",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "Z",
+                "start": 0,
+                "end": 1,
+                "captures": []
+              }
+            }
+          },
+          {
+            "case_id": "unicode-Lu-3",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "no_match",
+              "error": null,
+              "observation": null
+            }
+          }
+        ],
+        "findings": []
+      }
+    }
+  ]
+}

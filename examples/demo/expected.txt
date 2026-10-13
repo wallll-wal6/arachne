@@ -1,0 +1,35 @@
+Arachne migration demo: regexp@0.3.5 -> re-mbt@0.1.0 Perl (ASCII)
+[shared-ascii]
+baseline=moonbitlang/regexp cases=5 engines=2 findings=0 compatible=true
+request-id [moonbitlang/regexp] matched text=req-42 span=[0, 6) captures=[Some("42")]
+request-id [walkzzz/re-mbt/Perl (ASCII)] matched text=req-42 span=[0, 6) captures=[Some("42")]
+reject-empty-request-id [moonbitlang/regexp] no_match
+reject-empty-request-id [walkzzz/re-mbt/Perl (ASCII)] no_match
+search-with-prefix [moonbitlang/regexp] matched text=user=wal6 span=[5, 14) captures=[Some("wal6")]
+search-with-prefix [walkzzz/re-mbt/Perl (ASCII)] matched text=user=wal6 span=[5, 14) captures=[Some("wal6")]
+optional-unmatched-group [moonbitlang/regexp] matched text=dog span=[0, 3) captures=[None]
+optional-unmatched-group [walkzzz/re-mbt/Perl (ASCII)] matched text=dog span=[0, 3) captures=[None]
+empty-capture [moonbitlang/regexp] matched text=b span=[0, 1) captures=[Some("")]
+empty-capture [walkzzz/re-mbt/Perl (ASCII)] matched text=b span=[0, 1) captures=[Some("")]
+[syntax-difference]
+baseline=moonbitlang/regexp cases=1 engines=2 findings=1 compatible=false
+backreference-support-difference [moonbitlang/regexp] matched text=aa span=[0, 2) captures=[Some("a")]
+backreference-support-difference [walkzzz/re-mbt/Perl (ASCII)] compile_rejected error=re-mbt Perl frontend rejected the pattern
+backreference-support-difference [walkzzz/re-mbt/Perl (ASCII)] compile-acceptance: baseline compiled the pattern; candidate rejected it
+[adapter-domain]
+baseline=moonbitlang/regexp cases=2 engines=2 findings=2 compatible=false
+non-ascii-pattern [moonbitlang/regexp] matched text=猫 span=[0, 1) captures=[]
+non-ascii-pattern [walkzzz/re-mbt/Perl (ASCII)] compile_rejected error=adapter-domain: re-mbt Perl adapter currently accepts ASCII patterns only
+non-ascii-input [moonbitlang/regexp] matched text=a span=[2, 3) captures=[Some("a")]
+non-ascii-input [walkzzz/re-mbt/Perl (ASCII)] execution_failed error=adapter-domain: re-mbt Perl adapter currently accepts ASCII inputs only
+non-ascii-pattern [walkzzz/re-mbt/Perl (ASCII)] compile-acceptance: baseline compiled the pattern; candidate rejected it
+non-ascii-input [walkzzz/re-mbt/Perl (ASCII)] execution: baseline completed; candidate execution failed
+[unicode-official-only]
+baseline=moonbitlang/regexp cases=6 engines=1 findings=0 compatible=true
+bmp-literal [moonbitlang/regexp] matched text=猫 span=[0, 1) captures=[Some("猫")]
+supplementary-prefix-offset [moonbitlang/regexp] matched text=a span=[2, 3) captures=[Some("a")]
+unicode-Lu-0 [moonbitlang/regexp] matched text=A span=[0, 1) captures=[]
+unicode-Lu-1 [moonbitlang/regexp] no_match
+unicode-Lu-2 [moonbitlang/regexp] matched text=Z span=[0, 1) captures=[]
+unicode-Lu-3 [moonbitlang/regexp] no_match
+Findings require owner review; normal demo exit does not approve a migration.
