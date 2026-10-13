@@ -2,7 +2,7 @@
 
 ## Responsibility boundary
 
-Arachne owns fixture validation, adapter coordination, result normalization, baseline comparison, Unicode boundary-case generation, and report formatting. A backend adapter owns pattern compilation and matching. This separation keeps parser and matcher behavior in the actual engine under test.
+Arachne owns fixture validation, adapter coordination, result normalization, baseline comparison, Unicode boundary-case generation, and report formatting. An adapter delegates pattern compilation and matching to the backend engine. Parser and matcher implementations belong to the engine dependencies.
 
 `run_contracts` validates that engine IDs and case IDs are non-empty and unique and that the requested baseline exists. It then compiles each distinct pattern once per adapter, executes the relevant cases, checks optional golden expectations, and compares each candidate with the baseline. The resulting rows and findings preserve caller-specified order so CI output stays reproducible.
 
@@ -36,7 +36,7 @@ The [JSON v1 contract](docs/json-report-v1.md) defines the complete wire shape.
 
 ## Unicode boundary corpus
 
-The generated Unicode 17.0 tables store sorted, inclusive general-category ranges. `unicode_category_cases` turns each selected range boundary into a positive scalar sample and, where valid, tests the adjacent scalar outside the category. It skips surrogate code points and stops at the requested case count. This targets category transitions without running more than a million values by default.
+The tables labelled Unicode 17.0 store sorted, inclusive general-category ranges. `unicode_category_cases` turns each selected range boundary into a positive scalar sample and, where valid, tests the adjacent scalar outside the category. It skips surrogate code points and stops at the requested case count. The generator reads an external `UnicodeData.txt`; original input provenance remains for owner confirmation in the [disclosure](docs/2026-10-disclosure.md).
 
 The corpus is an oracle for constructing regression inputs, not a matching implementation or a universal statement about every backend's Unicode release. The suite deliberately reports a backend difference when its Unicode data does not agree with this pinned corpus; maintainers choose whether that difference is expected for their application.
 

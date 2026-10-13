@@ -1,6 +1,6 @@
 # Unicode corpus data
 
-The compatibility corpus uses inclusive Unicode General_Category ranges derived from Unicode 17.0 `UnicodeData.txt`. The generated file is test-oracle data; it is not used to classify input or execute regular expressions.
+The compatibility corpus uses inclusive Unicode General_Category ranges labelled Unicode 17.0. The generator reads an external `UnicodeData.txt` and writes that version label; confirming the original input version requires its provenance record, listed in the [disclosure](../docs/2026-10-disclosure.md). The generated file is test-oracle data; it is not used to classify input or execute regular expressions.
 
 To regenerate it, download the versioned Unicode data file and run:
 

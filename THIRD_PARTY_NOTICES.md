@@ -2,11 +2,10 @@
 
 ## Ownership and integration boundary
 
-The existing application identifies 韦安良 as Arachne's individual developer
-and maintainer; this disclosure is **待韦安良复核 / pending his review**.
-Its contract
-runner and adapter code call public dependency APIs; upstream maintainers are
-not Arachne team members. This integration makes no claim of upstream
+The contract runner, adapters, comparison and reports belong to this
+repository. They call public dependency APIs; parsing and matching belong to
+the engine dependencies. Dependency use does not establish team membership.
+This integration makes no claim of upstream
 contributions, joint development, or joint maintenance. Direct versions below
 are recorded in `moon.mod`; package imports are recorded in `moon.pkg`.
 
@@ -30,8 +29,11 @@ for the complete terms. Arachne's own source remains under the license in
 
 ## Unicode category data
 
-`unicode_data.mbt` is a generated range table derived from Unicode 17.0
-`UnicodeData.txt`, used to construct bounded regression fixtures. It is not
+`unicode_data.mbt` contains a range table labelled Unicode 17.0, used to
+construct bounded regression fixtures. The generator reads an externally
+supplied `UnicodeData.txt`; the original input version and provenance remain
+for the project owner to confirm in the [disclosure](docs/2026-10-disclosure.md).
+The table is not
 an Arachne regex engine implementation. Its separate notice is in
 [`UNICODE-LICENSE.txt`](UNICODE-LICENSE.txt), and regeneration is documented in
 [`tools/README.md`](tools/README.md).

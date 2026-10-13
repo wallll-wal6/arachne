@@ -12,13 +12,10 @@ moon run examples/demo-json
 node tools/verify-demo.mjs
 ```
 
-The newer toolchain installed by remote CI has previously rejected the legacy
-`moon.mod.json` manifest in `regexp@0.3.5` before tests. These steps reproduce
-the observed local environment; they do not establish compatibility with every
-MoonBit release. See the [recorded CI limitation](../../docs/initial-review-2026-10-13.md).
 For MoonBit `0.1.20261012`, insert `node tools/prepare-dependencies.mjs`
-after `moon update`. The [current acceptance record](../../docs/acceptance-2026-10-13.md)
-records successful core checks and the still-failing newer formatter check.
+after `moon update` to convert the legacy dependency manifests. See the
+[tool instructions](../../tools/README.md). A successful preparation does not
+replace the checks above or establish compatibility with every toolchain.
 
 `moon.mod` pins `moonbitlang/regexp@0.3.5` and `walkzzz/re-mbt@0.1.0`.
 `../migration-fixtures/fixtures.mbt` supplies every case to the existing
@@ -115,7 +112,7 @@ the supplementary scalar occupies two code units. UTF-8 byte offsets would be
 `[4, 5)` and scalar offsets `[1, 2)`. The ASCII adapter refuses this input
 instead of performing a speculative conversion.
 
-For the new literal search `(🦊)` on `猫🦊a`, the observed `[1, 3)` includes
+For the literal search `(🦊)` on `猫🦊a`, the observed `[1, 3)` includes
 both code units of the matched supplementary scalar. UTF-8 byte offsets would
 be `[3, 7)` and scalar offsets `[1, 2)`. Capture values are text; the adapters
 do not expose separate numeric capture-group spans.
@@ -123,48 +120,15 @@ do not expose separate numeric capture-group spans.
 The Unicode suite only exercises the official adapter. Its four explicit
 fixtures (BMP literal, supplementary prefix, supplementary literal, and Greek
 uppercase category search) and first four `Lu` boundary samples are a small regression
-sample from the existing Unicode 17.0 data. The generated four samples happen
+sample from the range table labelled Unicode 17.0. Its original input version
+requires the provenance confirmation listed in the [disclosure](../../docs/2026-10-disclosure.md). The generated four samples happen
 to be ASCII; they do not cover all categories, scripts, or supplementary
 scalars, prove engine equivalence, or compare re-mbt Unicode matching.
 
-## Human decisions and AI assistance
+## Human decisions
 
-The application owner chooses required behavior, permitted differences, and
-whether a migration is acceptable. This example retains the existing
-backreference interpretation and comparison rules. Codex assists with fixture
-implementation, documentation, and execution of regression checks; generated
-changes and snapshots still require human review. A normal demo exit displays
-the report, including expected differences. It does not approve migration or
-declare either engine wrong. This run does not claim completed human review.
-
-## Local validation, 2026-10-13
-
-Toolchain: `moon 0.1.20260827 (d0aaa07)`, `moonc v0.10.11+6ff76a5f9`,
-`moonrun 0.1.20260827`; Node.js `v24.19.0`.
-
-- First implementation commit, exported without other working-tree changes:
-  `moon update`, `moon check --deny-warn`, all 18 existing tests, and text demo
-  passed.
-- Final implementation: `moon check --deny-warn`, `moon test --deny-warn`, and
-  `moon test --target js --deny-warn` passed (22 tests per target).
-- Both executables matched the checked-in text and JSON via
-  `node tools/verify-demo.mjs` (default wasm) and `node tools/verify-demo.mjs js`.
-- In a temporary export of the staged files, extra text and an incorrect
-  Unicode start offset each made the regression fail; restored files passed.
-- `moon build`, `moon fmt`, `moon info`, and whitespace checks passed.
-- `moon test --target native --deny-warn` could not build: no C compiler
-  (`cl`, `cc`, `gcc`, or `clang`) was available. Native remains unverified locally.
-- Explicit `wasm-gc` could not build with this installation's missing target
-  standard library. The regression's default follows `moon run` rather than
-  assuming a particular target.
-
-Codex generated and checked the result files against the observed outcomes.
-Human acceptance of migration behavior remains pending; CI configuration is
-included, but remote CI has not been run and these commits are not pushed.
-
-This section records the earlier implementation run, not the latest pipeline
-validation. Current commands, observed results, and environment limits are in
-the [engineering acceptance record](../../docs/acceptance-2026-10-13.md).
-
-The later 19:48 example expansion, current counts, executed checks, and pending
-human review are recorded in the [example remediation record](../../docs/demo-review-2026-10-13.md).
+The application owner chooses required behavior, permitted differences and
+whether a migration is acceptable. A normal demo exit displays the report,
+including intentional differences; it does not record human approval or
+declare either engine wrong. Expected files pin fixture observations rather
+than approve migration.

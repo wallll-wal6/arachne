@@ -1,13 +1,12 @@
 # Arachne
 
-**申报定位：Arachne 是基于公开 MoonBit 正则引擎构建的行为契约 / 兼容性测试项目。**
-自有代码负责契约、适配、比较与报告；解析及匹配由 `moonbitlang/regexp@0.3.5`
-和 `walkzzz/re-mbt@0.1.0` 提供，不能将这些依赖能力申报为 Arachne 自研引擎。
-现有[十月申报书草案](docs/2026-10-hackathon-application-draft.md)、
-[代码边界与已测能力](docs/positioning.md)及[本次整改记录](docs/initial-review-2026-10-13.md)
-已按代码核对；全部修订仍**待韦安良复核**，九月申报和驳回原文尚未找到。
-当前申报与前三项提交证据汇总见[初审证据索引](docs/review-evidence-2026-10-13.md)；
-各阶段的测试数量与 CI 状态保留其实际日期和提交范围。
+**Arachne 是 MoonBit 正则行为契约 / 兼容性测试工具。**
+本仓库实现契约、适配、比较与报告；正则解析及匹配由公开依赖
+`moonbitlang/regexp@0.3.5` 和 `walkzzz/re-mbt@0.1.0` 提供。
+项目目标与定位由人工明确，AI 辅助检查和修改。
+[十月申报草案](docs/2026-10-hackathon-application-draft.md)与
+[项目边界](docs/positioning.md)说明实现职责；团队、个人贡献、完整 AI 使用和
+赛期归属等待负责人韦安良复核的事项见[披露附表](docs/2026-10-disclosure.md)。
 
 Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 
@@ -22,7 +21,7 @@ engine projects and documents the adapter requirements and limits.
 
 - **Behavior drift:** compare a selected baseline against one or more candidate adapters.
 - **Golden expectations:** assert match presence, whole-match text, capture text, and—when important—normalized whole-match spans.
-- **Unicode boundary fixtures:** generate deterministic positive and adjacent-negative cases from Unicode 17.0 general-category ranges, with a caller-selected case cap.
+- **Unicode boundary fixtures:** generate deterministic positive and adjacent-negative cases from the category range table labelled Unicode 17.0, with a caller-selected case cap.
 - **Stable reports:** preserve fixture and adapter order, format findings for build logs, and export versioned JSON for CI consumers.
 - **Compile reuse:** compile each distinct pattern once per adapter during a run, then reuse the compiled matcher for all matching cases.
 
@@ -36,17 +35,8 @@ This is a fixture-based compatibility check, not a proof that two engines are eq
 
 ## Quick start
 
-The locally verified entry point is a source checkout with MoonBit
-`0.1.20260827 (d0aaa07)` and Node.js 22+ on PATH (this run used Node.js 24.19.0).
-The [2026-10-13 remote CI run](https://github.com/wallll-wal6/arachne/actions/runs/38384999859)
-failed before tests: its installed MoonBit rejected the `moon.mod.json` manifest
-in the public `regexp@0.3.5` dependency. Compatibility with that CI toolchain
-was not established in that run. The later 21:32 work adds a manifest-only
-preparation step and verifies core checks with MoonBit `0.1.20261012`
-(moonc `v0.10.15+943464bfa`) in an isolated Windows checkout. Its formatter
-still requires an `Int` to `Int32` source migration, so full CI acceptance
-remains unverified. See the current section of the acceptance record below.
-From the original locally verified environment:
+Run from a source checkout with MoonBit `0.1.20260827 (d0aaa07)` and
+Node.js 22+ on PATH:
 
 ```sh
 moon update
@@ -58,15 +48,18 @@ node tools/verify-demo.mjs
 
 These commands resolve the declared engine versions, run tests, print a JSON
 demo envelope, and compare both real demos with checked-in expectations.
-For the newer locally checked toolchain, insert
-`node tools/prepare-dependencies.mjs` after `moon update`. It converts only
+For MoonBit `0.1.20261012`, insert `node tools/prepare-dependencies.mjs`
+after `moon update` to handle the dependency's legacy manifests. It converts only
 the six legacy `regexp@0.3.5` manifests in the downloaded `.mooncakes` cache,
 preserves every engine source file, and records the preparation probe.
 An unrecognized check error fails preparation; always run the strict checks
 afterwards. It does not upgrade dependencies or change the JSON v1 wire contract.
+Manifest preparation does not resolve the source migration required by that
+toolchain's formatter (`Int` to `Int32`); full CI acceptance remains unconfirmed.
 
-Registry publication and an installable Arachne release have not been verified
-by this workflow. For an application consuming Arachne, import the package as
+These source-checkout commands do not establish registry publication, an
+installable release or compatibility with every toolchain and execution target.
+For an application consuming Arachne, import the package as
 `@arachne` in its `moon.pkg` and use the following golden cases:
 
 ```moonbit
@@ -153,12 +146,15 @@ single report object. Check versions before interpreting either format.
 as well: identical compile or execution failures can produce no comparison
 finding. The application owner defines required behavior and accepts or
 rejects a migration; neither demo exit status nor this flag records human
-acceptance. AI assists with changes and checks, and human review remains
-required for scope and acceptance decisions.
+acceptance.
 
 ## Unicode category corpus
 
-`unicode_category_cases(category="Lu", max_cases=128)` creates bounded test fixtures from the generated Unicode 17.0 table. Positive cases exercise the start/end of category ranges; adjacent negative cases exercise transitions out of the category. Surrogate code points are skipped because they are not Unicode scalar values. Unknown categories and invalid limits return an error.
+`unicode_category_cases(category="Lu", max_cases=128)` creates bounded test fixtures from the range table labelled Unicode 17.0. Positive cases exercise the start/end of category ranges; adjacent negative cases exercise transitions out of the category. Surrogate code points are skipped because they are not Unicode scalar values. Unknown categories and invalid limits return an error.
+
+The generator labels its output as Unicode 17.0 but accepts an external input
+file. Confirming the original input version requires a provenance record; this
+is listed for owner review in the [disclosure](docs/2026-10-disclosure.md).
 
 The corpus is a boundary-focused regression aid, not an exhaustive test of every scalar value. Engines may ship different Unicode versions; report differences rather than assuming one version is universally correct. Generation steps and the Unicode data license are in [tools/README.md](tools/README.md) and [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt).
 
@@ -181,25 +177,24 @@ It also verifies that a golden span contract catches a supplementary-character
 offset error, so adapters can pin the offset convention before comparing
 backends.
 
-The [engineering acceptance record](docs/acceptance-2026-10-13.md) separates
-local results, environment restrictions, remote CI, publication, and human
-acceptance. CI preserves actual reports for default/JS/native targets; it does
+CI is configured to preserve actual reports for default/JS/native targets; it does
 not update expected files or decide which findings an application may accept.
 
 ## Scope
 
-Arachne is a compatibility-test library above regex engines. It complements engine projects by exercising their observable behavior against shared fixtures; it is not an alternative matcher. Its concrete integration with two independently implemented MoonBit engines reports differences in syntax acceptance and match results, while caller-owned contracts let applications pin the behavior they rely on.
+Arachne is a compatibility-test library above regex engines. It exercises their observable behavior against shared fixtures. Its integration with two public MoonBit engines reports differences in syntax acceptance and match results, while caller-owned contracts let applications pin the behavior they rely on.
 
-韦安良 is the applicant named in this remediation request; the existing
-individual-project and independent-maintenance disclosure remains pending his
-review. Its own
-MoonBit contract runner, adapters, fixtures, and reporting code are separate
+The MoonBit contract runner, adapters, fixtures, and reporting code are separate
 from the publicly distributed `moonbitlang/regexp@0.3.5` and
 `walkzzz/re-mbt@0.1.0` dependencies declared in `moon.mod`. The dependencies
-supply the parsers and matchers; their maintainers are not Arachne team members.
-Public API integration does not establish joint development or upstream
+supply the parsers and matchers. Public API integration does not establish
+team membership, joint development or upstream
 contributions. See the [project boundary](docs/positioning.md) and
 [third-party notices](THIRD_PARTY_NOTICES.md) for the source and data boundaries.
+
+Compile reuse and bounded fixture generation describe repository behavior;
+they are not performance benchmarks. Arachne makes no claim to implement an
+engine algorithm or guarantee matching performance.
 
 ## License
 
