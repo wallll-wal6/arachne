@@ -18,6 +18,15 @@ is a JSON boolean with the same meaning as `is_compatible()`.
 | Observation | `text`, `start`, `end`, `captures` |
 | Finding | `case_id`, `engine_id`, `kind`, `detail`, `baseline`, `actual` |
 
+All listed keys are required on emitted objects. `baseline_id`, `case_id`,
+`engine_id`, `status`, `kind`, `detail`, and matched `text` are strings.
+`case_count` and `engine_count` are nonnegative integers; `runs`, `findings`,
+and `captures` are arrays (including empty arrays). `error` is a string or
+`null`; `observation`, `baseline`, and `actual` are objects or `null`.
+For reports from `run_contracts`, each case has one run per engine, so
+`runs.length == case_count * engine_count`. Publicly constructed report
+objects can contain incomplete context; formatting does not revalidate them.
+
 Outcome status values are `compile_rejected`, `execution_failed`, `no_match`,
 and `matched`. Only the first two have a string `error`; only `matched` has an
 observation object. All other slots are `null`. Error strings are preserved
@@ -46,3 +55,40 @@ errors for consumers to inspect.
 Invalid suite configuration still returns `Err(ContractError)` before a
 report exists. This schema serializes successful report objects, including
 compile/execution failures recorded within them.
+
+## Version and compatibility policy
+
+`schema_version: 1` is the report wire contract, independent of the module
+version in `moon.mod`. A consumer must reject unsupported versions explicitly
+rather than interpreting them as v1. Within v1, producers preserve required
+keys, types, null semantics, status/kind labels, array ordering, and offset
+units. A change to those meanings, removal of a key, or a new status/kind label
+requires a new schema version. Additive optional metadata may be introduced
+without changing these meanings; consumers should ignore unknown object keys.
+JSON object key order, indentation, and escape spelling are not contractual:
+parse JSON before comparing it. Array order and string values are contractual.
+
+Diagnostic text comes from the comparison layer and the selected adapters.
+Use `kind` and `status` for program logic; do not parse prose or assume error
+messages remain unchanged across dependency upgrades. Pin dependencies and
+fixtures when reproducing a recorded result. Formatting a report adds no
+engine/version provenance, original inputs, human approval, or execution
+limits; save those separately when needed.
+
+## Copyable demo consumption
+
+From the repository root, `moon run examples/demo-json` prints one JSON object
+with `demo_version: 1` and `suites: [{name, report}, ...]`. Each `report` follows
+the contract above; the demo version describes only this example envelope.
+The following commands parse the actual output and print suite decisions:
+
+```sh
+moon run examples/demo-json > demo-report.json
+node --input-type=module -e 'import fs from "node:fs"; const d = JSON.parse(fs.readFileSync("demo-report.json", "utf8").replace(/^\uFEFF/, "")); if (d.demo_version !== 1) throw Error("unsupported demo version"); for (const s of d.suites) { if (s.report.schema_version !== 1) throw Error("unsupported report version"); console.log(s.name, s.report.compatible, s.report.findings.length); }'
+```
+
+Use a UTF-8 shell for redirection (PowerShell 7 or a POSIX shell); older Windows
+PowerShell may write UTF-16 instead. The BOM removal handles a UTF-8 BOM only.
+`node tools/verify-demo.mjs` avoids shell redirection and checks the text/JSON
+snapshots directly. The intentional syntax/domain findings are evidence for
+owner review, not a successful migration decision.

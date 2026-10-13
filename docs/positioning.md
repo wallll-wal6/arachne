@@ -97,7 +97,15 @@ that integration or implement a separately documented observation contract.
 
 ## Scope and current limits
 
-- The bundled adapter targets `moonbitlang/regexp`.
+The owner defines fixture scope, required behavior, accepted differences, and
+the final migration decision. AI assistance can implement documentation and
+checks and record observations; it cannot turn a passing regression into
+human acceptance. JSON v1 and the demo snapshots expose measured outcomes,
+including expected differences and adapter refusals. Neither is a release,
+publication, upstream contribution, or competition eligibility certificate.
+
+- The bundled official adapter targets `moonbitlang/regexp@0.3.5` as declared
+  in `moon.mod`; this does not establish compatibility with other releases.
 - The bundled `re-mbt` adapter targets its Perl frontend and accepts ASCII-only
   patterns and inputs. That restriction follows from the byte-oriented upstream
   API; non-ASCII offsets are not silently converted or guessed.

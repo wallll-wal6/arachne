@@ -27,13 +27,22 @@ This is a fixture-based compatibility check, not a proof that two engines are eq
 
 ## Quick start
 
-Add Arachne to a MoonBit project after publishing:
+The reproducible entry point is a source checkout with MoonBit and Node.js
+22+ on PATH. From the repository root:
 
 ```sh
-moon add wallll-wal6/arachne
+moon update
+moon check --deny-warn
+moon test --deny-warn
+moon run examples/demo-json
+node tools/verify-demo.mjs
 ```
 
-Run a set of golden cases against the bundled official-engine adapter:
+These commands resolve the declared engine versions, run tests, print a JSON
+demo envelope, and compare both real demos with checked-in expectations.
+Registry publication and an installable Arachne release have not been verified
+by this workflow. For an application consuming Arachne, import the package as
+`@arachne` in its `moon.pkg` and use the following golden cases:
 
 ```moonbit
 let cases = [
@@ -111,7 +120,16 @@ to inspect its typed model. The document includes its schema version, counts,
 compatibility flag, every engine outcome, and findings with both baseline and
 actual outcome context. Unmatched captures and absent observations use `null`.
 See the [JSON v1 contract](docs/json-report-v1.md) for status labels, fields,
-offset conventions, and failure semantics.
+offset conventions, failure semantics, and consumer compatibility rules. The
+demo wraps these reports in a separate `demo_version: 1` envelope; it is not a
+single report object. Check versions before interpreting either format.
+
+`compatible: true` means no findings in this fixture run. Inspect each outcome
+as well: identical compile or execution failures can produce no comparison
+finding. The application owner defines required behavior and accepts or
+rejects a migration; neither demo exit status nor this flag records human
+acceptance. AI assists with changes and checks, and human review remains
+required for scope and acceptance decisions.
 
 ## Unicode category corpus
 
