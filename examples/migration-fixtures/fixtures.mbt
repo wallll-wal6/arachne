@@ -45,6 +45,24 @@ pub fn run_demo() -> Array[(String, @arachne.CompatibilityReport)] {
       start=0,
       end=1,
     ),
+    @arachne.ContractCase::expect_match_span(
+      id="multiple-captures",
+      pattern="^([A-Z]+)-([0-9]+)$",
+      input="ORD-2048",
+      text="ORD-2048",
+      captures=[Some("ORD"), Some("2048")],
+      start=0,
+      end=8,
+    ),
+    @arachne.ContractCase::expect_match_span(
+      id="empty-whole-match",
+      pattern="^(a*)$",
+      input="",
+      text="",
+      captures=[Some("")],
+      start=0,
+      end=0,
+    ),
   ]
   // Probes deliberately have no shared golden expectation. Preserve the
   // existing compile-acceptance finding for the application owner's review.
@@ -85,6 +103,24 @@ pub fn run_demo() -> Array[(String, @arachne.CompatibilityReport)] {
       captures=[Some("a")],
       start=2,
       end=3,
+    ),
+    @arachne.ContractCase::expect_match_span(
+      id="supplementary-literal-span",
+      pattern="(🦊)",
+      input="猫🦊a",
+      text="🦊",
+      captures=[Some("🦊")],
+      start=1,
+      end=3,
+    ),
+    @arachne.ContractCase::expect_match_span(
+      id="non-ascii-uppercase-category",
+      pattern="(\\p{Lu})",
+      input="éΩ🦊",
+      text="Ω",
+      captures=[Some("Ω")],
+      start=1,
+      end=2,
     ),
   ]
   // This bounded generator contributes A, @, Z, [ in that order.

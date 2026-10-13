@@ -1,14 +1,21 @@
 # Reproducible backend migration example
 
-From the repository root, with MoonBit on PATH:
+From the repository root, with the locally verified MoonBit
+`0.1.20260827 (d0aaa07)` and Node.js 22+ on PATH:
 
 ```sh
 moon update
 moon check --deny-warn
+moon test --deny-warn
 moon run examples/demo
 moon run examples/demo-json
 node tools/verify-demo.mjs
 ```
+
+The newer toolchain installed by remote CI has previously rejected the legacy
+`moon.mod.json` manifest in `regexp@0.3.5` before tests. These steps reproduce
+the observed local environment; they do not establish compatibility with every
+MoonBit release. See the [recorded CI limitation](../../docs/initial-review-2026-10-13.md).
 
 `moon.mod` pins `moonbitlang/regexp@0.3.5` and `walkzzz/re-mbt@0.1.0`.
 `../migration-fixtures/fixtures.mbt` supplies every case to the existing
@@ -17,14 +24,16 @@ engine, parser, matcher, or alternative comparison policy is introduced.
 
 | Suite | Scope | Expected observation |
 | --- | --- | --- |
-| `shared-ascii` | Both real adapters; five application contracts | Request-ID match and rejection, search span, unmatched optional capture, empty capture; zero findings |
+| `shared-ascii` | Both real adapters; seven application contracts | Request-ID match and rejection, search span, unmatched optional capture, empty capture, ordered multiple captures, empty whole match; zero findings |
 | `syntax-difference` | Both real adapters; one existing probe | `^([a-z])\1$` on `aa`: regexp matches, re-mbt Perl rejects; one compile-acceptance finding |
 | `adapter-domain` | Both adapters; two boundary probes | Literal `猫` pattern is rejected at compile time by the ASCII adapter; ASCII `(a)` on `🦊a` is refused at execution time; two findings |
-| `unicode-official-only` | Official adapter; six cases | BMP literal `猫`, supplementary-prefix span, and four generated `Lu` boundaries: `A`, `@`, `Z`, `[`; zero findings |
+| `unicode-official-only` | Official adapter; eight cases | BMP literal `猫`, supplementary-prefix span, supplementary literal `🦊`, non-ASCII `Lu` match `Ω`, and four generated boundaries: `A`, `@`, `Z`, `[`; zero findings |
 
 The text output includes every engine outcome, so matching common cases,
 non-matches, captures, spans, and rejection reasons are observable.
 An unmatched capture is `None`; a participating empty capture is `Some("")`.
+An empty whole match is still a match: `^(a*)$` on `""` returns text `""`,
+span `[0, 0)` and capture `Some("")` in both backends, rather than `no_match`.
 The probe suites omit shared golden expectations: their findings preserve
 observations for review without requiring both engines to accept a feature.
 
@@ -32,6 +41,22 @@ observations for review without requiring both engines to accept a feature.
 structured output. The JSON envelope has `demo_version: 1` and named `suites`,
 each containing the existing report v1 object. It distinguishes unmatched
 captures (`null`) from participating empty captures (`""`).
+
+Representative expected observations (the complete output is in `expected.txt`):
+
+| Pattern / input | Backend | Result / captures / UTF-16 span |
+| --- | --- | --- |
+| `^([A-Z]+)-([0-9]+)$` / `ORD-2048` | Both | `ORD-2048`, `[Some("ORD"), Some("2048")]`, `[0, 8)` |
+| `^(a*)$` / empty string | Both | empty text, `[Some("")]`, `[0, 0)` |
+| `^([a-z])\1$` / `aa` | regexp | `aa`, `[Some("a")]`, `[0, 2)` |
+| same backreference | re-mbt Perl | `compile_rejected`; one compile-acceptance finding |
+| `(🦊)` / `猫🦊a` | regexp only | `🦊`, `[Some("🦊")]`, `[1, 3)` |
+| `(\p{Lu})` / `éΩ🦊` | regexp only | `Ω`, `[Some("Ω")]`, `[1, 2)` |
+
+Summary lines have `cases/engines/findings` counts of `7/2/0`, `1/2/1`,
+`2/2/2`, and `8/1/0`, respectively. The last line requests owner review;
+the two intentional difference suites have `compatible=false`.
+
 `node tools/verify-demo.mjs` needs Node.js 22+ and runs both executables, compares
 text after newline normalization, and compares parsed JSON without depending
 on object key order. Each executable runs twice to check repeatability.
@@ -70,8 +95,14 @@ the supplementary scalar occupies two code units. UTF-8 byte offsets would be
 `[4, 5)` and scalar offsets `[1, 2)`. The ASCII adapter refuses this input
 instead of performing a speculative conversion.
 
-The Unicode suite only exercises the official adapter. Its two explicit
-non-ASCII fixtures and first four `Lu` boundary samples are a small regression
+For the new literal search `(🦊)` on `猫🦊a`, the observed `[1, 3)` includes
+both code units of the matched supplementary scalar. UTF-8 byte offsets would
+be `[3, 7)` and scalar offsets `[1, 2)`. Capture values are text; the adapters
+do not expose separate numeric capture-group spans.
+
+The Unicode suite only exercises the official adapter. Its four explicit
+fixtures (BMP literal, supplementary prefix, supplementary literal, and Greek
+uppercase category search) and first four `Lu` boundary samples are a small regression
 sample from the existing Unicode 17.0 data. The generated four samples happen
 to be ASCII; they do not cover all categories, scripts, or supplementary
 scalars, prove engine equivalence, or compare re-mbt Unicode matching.
@@ -114,3 +145,6 @@ included, but remote CI has not been run and these commits are not pushed.
 This section records the earlier implementation run, not the latest pipeline
 validation. Current commands, observed results, and environment limits are in
 the [engineering acceptance record](../../docs/acceptance-2026-10-13.md).
+
+The later 19:48 example expansion, current counts, executed checks, and pending
+human review are recorded in the [example remediation record](../../docs/demo-review-2026-10-13.md).

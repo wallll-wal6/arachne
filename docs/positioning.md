@@ -78,7 +78,7 @@ acceptance result, and Arachne does not claim to verify every frontend.
 
 On 2026-10-13, Codex ran default and JS `moon check --deny-warn`,
 `moon test --deny-warn` (24 passed on each target), and `verify-demo.mjs` against
-the current checkout. Both demos matched their checked-in text/JSON snapshots
+that run's checkout. Both demos matched their checked-in text/JSON snapshots
 and repeated identically. See the [run record](initial-review-2026-10-13.md)
 for exact commands and responsibility disclosure.
 
@@ -95,6 +95,14 @@ new evidence; it does not migrate an upstream manifest or change CI.
 | `syntax-difference` | `^([a-z])\1$` with `aa`: official backend compiles and matches; re-mbt Perl rejects compilation; one compile-acceptance finding | This fixture at these versions, not a universal syntax-equivalence result |
 | `adapter-domain` | Non-ASCII pattern yields compile rejection; non-ASCII input yields execution failure in the ASCII adapter; two findings | Explicit Arachne adapter restriction, not evidence that all re-mbt frontends cannot process such data |
 | `unicode-official-only` | Six cases, official backend only, zero findings; BMP literal, supplementary-prefix span `[2, 3)`, and four `Lu` boundary cases | No cross-engine Unicode verification, no exhaustive category coverage |
+
+The table records the earlier 18:31 review. The later
+[19:48 example remediation](demo-review-2026-10-13.md) expands shared ASCII to
+seven cases and official-only Unicode to eight, adding multiple captures,
+empty whole matches, a supplementary literal, and a non-ASCII `Lu` match.
+Default and JS now each pass 29 tests; the syntax/domain differences and
+cross-engine Unicode limits remain the same. These implementation choices and
+interpretations are Codex assistance, **待韦安良复核**.
 
 The public adapters expose a single whole-match observation with numeric capture
 text. They do not expose every match, named-group maps or capture-group spans.

@@ -6,7 +6,7 @@
       "report": {
         "schema_version": 1,
         "baseline_id": "moonbitlang/regexp",
-        "case_count": 5,
+        "case_count": 7,
         "engine_count": 2,
         "compatible": true,
         "runs": [
@@ -150,6 +150,72 @@
                 "text": "b",
                 "start": 0,
                 "end": 1,
+                "captures": [
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "multiple-captures",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "ORD-2048",
+                "start": 0,
+                "end": 8,
+                "captures": [
+                  "ORD",
+                  "2048"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "multiple-captures",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "ORD-2048",
+                "start": 0,
+                "end": 8,
+                "captures": [
+                  "ORD",
+                  "2048"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "empty-whole-match",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "",
+                "start": 0,
+                "end": 0,
+                "captures": [
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "empty-whole-match",
+            "engine_id": "walkzzz/re-mbt/Perl (ASCII)",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "",
+                "start": 0,
+                "end": 0,
                 "captures": [
                   ""
                 ]
@@ -333,7 +399,7 @@
       "report": {
         "schema_version": 1,
         "baseline_id": "moonbitlang/regexp",
-        "case_count": 6,
+        "case_count": 8,
         "engine_count": 1,
         "compatible": true,
         "runs": [
@@ -365,6 +431,38 @@
                 "end": 3,
                 "captures": [
                   "a"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "supplementary-literal-span",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "🦊",
+                "start": 1,
+                "end": 3,
+                "captures": [
+                  "🦊"
+                ]
+              }
+            }
+          },
+          {
+            "case_id": "non-ascii-uppercase-category",
+            "engine_id": "moonbitlang/regexp",
+            "outcome": {
+              "status": "matched",
+              "error": null,
+              "observation": {
+                "text": "Ω",
+                "start": 1,
+                "end": 2,
+                "captures": [
+                  "Ω"
                 ]
               }
             }

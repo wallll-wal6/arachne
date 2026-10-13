@@ -87,8 +87,8 @@ From a checkout, run the real two-engine example with:
 moon run examples/demo
 ```
 
-It runs five shared ASCII contracts, the existing backreference difference,
-two explicit ASCII-adapter domain probes, and six official-engine Unicode
+It runs seven shared ASCII contracts, the existing backreference difference,
+two explicit ASCII-adapter domain probes, and eight official-engine Unicode
 fixtures. Every observation is printed, including captures and spans.
 See the [reproducible migration walkthrough](examples/demo/README.md) for the
 JSON executable, expected results, regression command, Unicode sample scope,
