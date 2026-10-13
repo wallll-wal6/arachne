@@ -126,6 +126,15 @@ backends.
 
 Arachne is a compatibility-test library above regex engines. It complements engine projects by exercising their observable behavior against shared fixtures; it is not an alternative matcher. Its concrete integration with two independently implemented MoonBit engines reports differences in syntax acceptance and match results, while caller-owned contracts let applications pin the behavior they rely on.
 
+Arachne is an individual project developed and maintained by 韦安良. Its own
+MoonBit contract runner, adapters, fixtures, and reporting code are separate
+from the publicly distributed `moonbitlang/regexp@0.3.5` and
+`walkzzz/re-mbt@0.1.0` dependencies declared in `moon.mod`. The dependencies
+supply the parsers and matchers; their maintainers are not Arachne team members.
+Public API integration does not establish joint development or upstream
+contributions. See the [project boundary](docs/positioning.md) and
+[third-party notices](THIRD_PARTY_NOTICES.md) for the source and data boundaries.
+
 ## License
 
 The Arachne source is Apache-2.0. See [LICENSE](LICENSE). Unicode category range data is separately covered by [UNICODE-LICENSE.txt](UNICODE-LICENSE.txt). The re-mbt backend is a separately licensed dependency; see [third-party notices](THIRD_PARTY_NOTICES.md).

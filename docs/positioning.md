@@ -6,6 +6,47 @@ adapter exposes those results through one small observation type. Arachne runs
 shared cases, checks optional expected results, compares adapters, and emits
 deterministic findings.
 
+## Competition disclosure
+
+The existing application draft records a September review concern about
+describing Arachne as a self-developed regular-expression engine. That
+description does not match the current repository. The current project is a
+behavior-contract and regression-testing library; it does not parse regular
+expressions or perform matching. The original September application and review
+are not included here, so their exact wording must be confirmed by the applicant
+before submission.
+
+The module declares `moonbitlang/regexp@0.3.5` and `walkzzz/re-mbt@0.1.0`
+as direct dependencies in `moon.mod`.
+Its adapters call those packages and translate their observed results into a
+shared contract format. The matcher implementations remain in their upstream
+repositories; Arachne neither vendors nor modifies them in this repository.
+The `re-mbt` adapter is intentionally limited to ASCII inputs because the
+upstream interface reports byte offsets.
+
+The Arachne project is an individual project developed and maintained by
+韦安良. Upstream package maintainers are not Arachne team members merely
+because Arachne depends on or calls their public packages. The repository
+history and dependency declarations show integration through public packages;
+they do not by themselves establish joint development or maintenance.
+
+Arachne's contribution is the layer around those engines: reusable contract
+cases, normalized observations, cross-engine comparisons, bounded Unicode
+boundary fixtures, and stable findings for regression review. An observed
+difference is reported for the application owner to evaluate; Arachne does
+not claim that one engine is correct or that finite fixtures prove full
+equivalence. Whether the applicant has contributed to either upstream project
+is **待确认 / pending applicant confirmation**. Any confirmed contribution must
+be listed separately with a verifiable link and scope; dependency declarations
+and local Git identity are not evidence of such contributions.
+
+First-party implementation is in `contract.mbt` and `rembt_adapter.mbt`, with
+tests in `contract_test.mbt` and a runnable example in `examples/demo/main.mbt`.
+The generator `tools/generate_unicode.mjs` produces `unicode_data.mbt` from
+Unicode data: that generated range table is separately licensed data, not
+an original matching algorithm. Source paths and dependency imports make
+these responsibilities reviewable without attributing upstream work to Arachne.
+
 This makes the project useful when an application changes regex backends, wraps
 a backend behind its own API, or needs to pin behavior across dependency
 updates. A contract can state that a pattern must compile, match (or not match),
@@ -16,22 +57,20 @@ unit. A run can then detect accidental changes before they reach an application.
 
 The distinction is architectural and testable:
 
-| Concern | Arachne | A regex engine such as `walkzzz/re-mbt` |
+| Concern | Arachne | External regex dependencies |
 | --- | --- | --- |
 | Parse a pattern and implement syntax | No; delegated to an adapter | Yes |
 | Execute matching | No; delegated to an adapter | Yes |
-| Publish a caller-facing API for reusable contract cases | Yes | Not documented in its public README/API |
+| Publish Arachne's reusable contract-case API | `ContractCase` and `run_contracts` | Supplies the backend called by an adapter |
 | Ship an adapter to call the real `re-mbt` Perl frontend | Yes, with an explicit ASCII-only domain | It supplies the engine |
-| Run the same caller-supplied cases through multiple real adapters | Yes; both bundled adapters are executed in tests | Not documented as a public capability |
+| Run the same caller-supplied cases through multiple real adapters | Yes; both bundled adapters are executed in tests | Each engine supplies its own observations |
 | Compare compile, match, span, and capture observations | Yes | The documented package is the engine being observed |
-| Produce ordered findings for a CI log | Yes | Not documented as a package feature |
+| Produce Arachne's ordered findings for a CI log | Yes | Does not supply Arachne's report implementation |
 | Generate bounded Unicode boundary inputs | Yes; current Unicode corpus is exercised with the official adapter, not the ASCII-only re-mbt adapter | The engine implements its own Unicode behavior |
 
-The `walkzzz/re-mbt` public project describes itself as an OCaml `re` port and
-documents parsing, automata, matching, search, replacement, six syntax
-frontends, and an extensive engine test suite. Those are engine capabilities;
-Arachne does not claim those tests do not exist and does not reimplement those
-facilities. Arachne now exercises `re-mbt` directly through a first-party Perl
+This table describes the responsibilities exercised in this repository, not
+an inventory of all upstream features or tests. Arachne exercises `re-mbt`
+directly through a first-party Perl
 adapter as well as the official `moonbitlang/regexp` adapter. The checked-in
 integration contract includes ordinary shared patterns plus a backreference
 case; the real engines disagree on compile acceptance for that case, and
