@@ -90,6 +90,7 @@ pub(all) struct EngineOutcomeJsonV1 {
   error : String?
   observation : MatchJsonV1?
 }
+pub fn EngineOutcomeJsonV1::to_json(Self) -> Json
 pub impl ToJson for EngineOutcomeJsonV1
 
 pub(all) struct EngineRun {
@@ -103,6 +104,7 @@ pub(all) struct EngineRunJsonV1 {
   engine_id : String
   outcome : EngineOutcomeJsonV1
 } derive(ToJson)
+pub fn EngineRunJsonV1::to_json(Self) -> Json
 
 pub(all) enum ExpectedOutcome {
   ExpectedNoMatch
@@ -120,6 +122,7 @@ pub(all) struct FindingJsonV1 {
   baseline : EngineOutcomeJsonV1?
   actual : EngineOutcomeJsonV1?
 }
+pub fn FindingJsonV1::to_json(Self) -> Json
 pub impl ToJson for FindingJsonV1
 
 pub(all) enum FindingKind {
@@ -141,6 +144,7 @@ pub(all) struct MatchJsonV1 {
   end : Int
   captures : Array[String?]
 }
+pub fn MatchJsonV1::to_json(Self) -> Json
 pub impl ToJson for MatchJsonV1
 
 pub(all) struct MatchObservation {
@@ -163,6 +167,7 @@ pub(all) struct ReportJsonV1 {
   findings : Array[FindingJsonV1]
 } derive(ToJson)
 pub fn ReportJsonV1::stringify(Self) -> String
+pub fn ReportJsonV1::to_json(Self) -> Json
 
 pub(all) enum UnicodeCorpusError {
   UnknownCategory(String)

@@ -72,10 +72,10 @@ test "JSON round trips all control characters in identifiers errors and matches"
   }
   let encoded = report.format_json()
   let observation : Json = {
-    "text": probe.to_json(),
+    "text": ToJson::to_json(probe),
     "start": 0,
-    "end": probe.length().to_json(),
-    "captures": [probe.to_json(), null, ""],
+    "end": ToJson::to_json(probe.length()),
+    "captures": [ToJson::to_json(probe), null, ""],
   }
   let baseline : Json = {
     "status": "matched",
@@ -84,33 +84,33 @@ test "JSON round trips all control characters in identifiers errors and matches"
   }
   let actual : Json = {
     "status": "execution_failed",
-    "error": probe.to_json(),
+    "error": ToJson::to_json(probe),
     "observation": null,
   }
   assert_eq(@json.parse(encoded), {
     "schema_version": 1,
-    "baseline_id": baseline_id.to_json(),
+    "baseline_id": ToJson::to_json(baseline_id),
     "case_count": 1,
     "engine_count": 2,
     "compatible": false,
     "runs": [
       {
-        "case_id": probe.to_json(),
-        "engine_id": baseline_id.to_json(),
+        "case_id": ToJson::to_json(probe),
+        "engine_id": ToJson::to_json(baseline_id),
         "outcome": baseline,
       },
       {
-        "case_id": probe.to_json(),
-        "engine_id": probe.to_json(),
+        "case_id": ToJson::to_json(probe),
+        "engine_id": ToJson::to_json(probe),
         "outcome": actual,
       },
     ],
     "findings": [
       {
-        "case_id": probe.to_json(),
-        "engine_id": probe.to_json(),
+        "case_id": ToJson::to_json(probe),
+        "engine_id": ToJson::to_json(probe),
         "kind": "execution",
-        "detail": probe.to_json(),
+        "detail": ToJson::to_json(probe),
         "baseline": baseline,
         "actual": actual,
       },

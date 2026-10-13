@@ -41,7 +41,12 @@ The locally verified entry point is a source checkout with MoonBit
 The [2026-10-13 remote CI run](https://github.com/wallll-wal6/arachne/actions/runs/38384999859)
 failed before tests: its installed MoonBit rejected the `moon.mod.json` manifest
 in the public `regexp@0.3.5` dependency. Compatibility with that CI toolchain
-has not been established. From the locally verified environment:
+was not established in that run. The later 21:32 work adds a manifest-only
+preparation step and verifies core checks with MoonBit `0.1.20261012`
+(moonc `v0.10.15+943464bfa`) in an isolated Windows checkout. Its formatter
+still requires an `Int` to `Int32` source migration, so full CI acceptance
+remains unverified. See the current section of the acceptance record below.
+From the original locally verified environment:
 
 ```sh
 moon update
@@ -53,6 +58,13 @@ node tools/verify-demo.mjs
 
 These commands resolve the declared engine versions, run tests, print a JSON
 demo envelope, and compare both real demos with checked-in expectations.
+For the newer locally checked toolchain, insert
+`node tools/prepare-dependencies.mjs` after `moon update`. It converts only
+the six legacy `regexp@0.3.5` manifests in the downloaded `.mooncakes` cache,
+preserves every engine source file, and records the preparation probe.
+An unrecognized check error fails preparation; always run the strict checks
+afterwards. It does not upgrade dependencies or change the JSON v1 wire contract.
+
 Registry publication and an installable Arachne release have not been verified
 by this workflow. For an application consuming Arachne, import the package as
 `@arachne` in its `moon.pkg` and use the following golden cases:

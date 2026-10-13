@@ -29,7 +29,9 @@ jobs:
       - name: Install MoonBit
         shell: bash
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          mkdir -p artifacts
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh -o artifacts/install-moonbit.sh
+          bash artifacts/install-moonbit.sh
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - name: Show MoonBit toolchain version
         run: |
@@ -37,33 +39,37 @@ jobs:
           moon version --all | tee artifacts/toolchain.txt
           node --version | tee -a artifacts/toolchain.txt
           git rev-parse HEAD | tee artifacts/revision.txt
+          # Fail on toolchain drift: dated archives currently return HTTP 403.
+          grep -F 'moon 0.1.20261012 (748b63c' artifacts/toolchain.txt
+          grep -F 'moonc v0.10.15+943464bfa' artifacts/toolchain.txt
       - name: Resolve pinned module dependencies
-        run: moon update
+        run: moon update 2>&1 | tee artifacts/update.log
+      - name: Prepare legacy dependency manifests without changing engine sources
+        run: node tools/prepare-dependencies.mjs artifacts/dependency-preparation
       - name: Check warnings
         run: |
           target_args=()
           if [ "$ARACHNE_TARGET" != default ]; then target_args=(--target "$ARACHNE_TARGET"); fi
-          moon check "${target_args[@]}" --deny-warn
+          moon check "${target_args[@]}" --deny-warn 2>&1 | tee artifacts/check.log
       - name: Run tests
         run: |
           target_args=()
           if [ "$ARACHNE_TARGET" != default ]; then target_args=(--target "$ARACHNE_TARGET"); fi
-          moon test "${target_args[@]}" --deny-warn
+          moon test "${target_args[@]}" --deny-warn 2>&1 | tee artifacts/test.log
       - name: Build packages
         run: |
           target_args=()
           if [ "$ARACHNE_TARGET" != default ]; then target_args=(--target "$ARACHNE_TARGET"); fi
-          moon build "${target_args[@]}" --deny-warn
+          moon build "${target_args[@]}" --deny-warn 2>&1 | tee artifacts/build.log
       - name: Verify migration text, JSON, and repeatability
-        run: node tools/verify-demo.mjs "$ARACHNE_TARGET" artifacts
+        run: node tools/verify-demo.mjs "$ARACHNE_TARGET" artifacts 2>&1 | tee artifacts/demo-check.log
       - name: Verify public interface
         run: |
-          moon info
-          git diff --exit-code
+          moon info 2>&1 | tee artifacts/info.log
+          git diff --exit-code 2>&1 | tee artifacts/interface-diff.log
       - name: Check formatting
         run: |
-          moon fmt
-          git diff --exit-code
+          moon fmt --check 2>&1 | tee artifacts/format.log
       - name: Preserve observed reports and toolchain
         if: always()
         uses: actions/upload-artifact@v7

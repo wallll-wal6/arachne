@@ -16,6 +16,9 @@ The newer toolchain installed by remote CI has previously rejected the legacy
 `moon.mod.json` manifest in `regexp@0.3.5` before tests. These steps reproduce
 the observed local environment; they do not establish compatibility with every
 MoonBit release. See the [recorded CI limitation](../../docs/initial-review-2026-10-13.md).
+For MoonBit `0.1.20261012`, insert `node tools/prepare-dependencies.mjs`
+after `moon update`. The [current acceptance record](../../docs/acceptance-2026-10-13.md)
+records successful core checks and the still-failing newer formatter check.
 
 `moon.mod` pins `moonbitlang/regexp@0.3.5` and `walkzzz/re-mbt@0.1.0`.
 `../migration-fixtures/fixtures.mbt` supplies every case to the existing

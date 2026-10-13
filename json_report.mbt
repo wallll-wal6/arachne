@@ -53,10 +53,10 @@ pub(all) struct FindingJsonV1 {
 // nullable slots explicitly to retain null keys and scalar capture strings.
 pub impl ToJson for EngineOutcomeJsonV1 with fn to_json(self) {
   {
-    "status": self.status.to_json(),
+    "status": ToJson::to_json(self.status),
     "error": match self.error {
       None => null
-      Some(message) => message.to_json()
+      Some(message) => ToJson::to_json(message)
     },
     "observation": match self.observation {
       None => null
@@ -68,27 +68,27 @@ pub impl ToJson for EngineOutcomeJsonV1 with fn to_json(self) {
 ///|
 pub impl ToJson for MatchJsonV1 with fn to_json(self) {
   {
-    "text": self.text.to_json(),
-    "start": self.start.to_json(),
-    "end": self.end.to_json(),
-    "captures": self.captures
-    .map(capture => {
-      match capture {
-        None => null
-        Some(text) => text.to_json()
-      }
-    })
-    .to_json(),
+    "text": ToJson::to_json(self.text),
+    "start": ToJson::to_json(self.start),
+    "end": ToJson::to_json(self.end),
+    "captures": ToJson::to_json(
+      self.captures.map(capture => {
+        match capture {
+          None => null
+          Some(text) => ToJson::to_json(text)
+        }
+      }),
+    ),
   }
 }
 
 ///|
 pub impl ToJson for FindingJsonV1 with fn to_json(self) {
   {
-    "case_id": self.case_id.to_json(),
-    "engine_id": self.engine_id.to_json(),
-    "kind": self.kind.to_json(),
-    "detail": self.detail.to_json(),
+    "case_id": ToJson::to_json(self.case_id),
+    "engine_id": ToJson::to_json(self.engine_id),
+    "kind": ToJson::to_json(self.kind),
+    "detail": ToJson::to_json(self.detail),
     "baseline": match self.baseline {
       None => null
       Some(outcome) => ToJson::to_json(outcome)
@@ -153,7 +153,7 @@ fn write_report_json(value : Json, output : StringBuilder) -> Unit {
         if index > 0 {
           output.write_char(',')
         }
-        output.write_string(key.to_json().stringify())
+        output.write_string(ToJson::to_json(key).stringify())
         output.write_char(':')
         write_report_json(members[key], output)
       }
@@ -208,3 +208,18 @@ fn find_json_outcome(
   }
   None
 }
+
+///|
+pub extend ReportJsonV1 with ToJson::{to_json}
+
+///|
+pub extend EngineRunJsonV1 with ToJson::{to_json}
+
+///|
+pub extend EngineOutcomeJsonV1 with ToJson::{to_json}
+
+///|
+pub extend MatchJsonV1 with ToJson::{to_json}
+
+///|
+pub extend FindingJsonV1 with ToJson::{to_json}

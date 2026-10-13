@@ -5,6 +5,13 @@
 whose `stringify()` method emits the same schema. Formatting never invokes an
 adapter. The existing text summary and findings remain available.
 
+The 21:32 toolchain compatibility change uses explicit `ToJson` calls and
+five explicit method extensions (also shown in the generated interface).
+It preserves the v1 fields, values, nulls, lexical key order and snapshots;
+there is no schema version increment. The `json` package import is test-only.
+See the [current acceptance record](acceptance-2026-10-13.md) for checked
+toolchains and the remaining formatting limitation.
+
 Consumers must check the integer `schema_version` before interpreting fields.
 Version 1 uses the following field structure; optional values are explicit
 `null`, never omitted. Counts and offsets are JSON integers, and `compatible`
