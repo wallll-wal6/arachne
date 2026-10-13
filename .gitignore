@@ -2,3 +2,4 @@ target/
 .moon/
 _build/
 /UnicodeData.txt
+/artifacts/

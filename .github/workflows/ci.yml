@@ -11,30 +11,51 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [default, js, native]
+    env:
+      ARACHNE_TARGET: ${{ matrix.target }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install MoonBit
         shell: bash
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - name: Show MoonBit toolchain version
-        run: moon version --all
+        run: |
+          mkdir -p artifacts
+          moon version --all | tee artifacts/toolchain.txt
+          node --version | tee -a artifacts/toolchain.txt
+          git rev-parse HEAD | tee artifacts/revision.txt
       - name: Resolve pinned module dependencies
         run: moon update
       - name: Check warnings
-        run: moon check --deny-warn
+        run: |
+          target_args=()
+          if [ "$ARACHNE_TARGET" != default ]; then target_args=(--target "$ARACHNE_TARGET"); fi
+          moon check "${target_args[@]}" --deny-warn
       - name: Run tests
-        run: moon test
-      - name: Run cross-engine demo
-        run: moon run examples/demo
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Verify migration demo text and JSON
-        run: node tools/verify-demo.mjs
-      - name: Run native tests
-        run: moon test --target native
+        run: |
+          target_args=()
+          if [ "$ARACHNE_TARGET" != default ]; then target_args=(--target "$ARACHNE_TARGET"); fi
+          moon test "${target_args[@]}" --deny-warn
+      - name: Build packages
+        run: |
+          target_args=()
+          if [ "$ARACHNE_TARGET" != default ]; then target_args=(--target "$ARACHNE_TARGET"); fi
+          moon build "${target_args[@]}" --deny-warn
+      - name: Verify migration text, JSON, and repeatability
+        run: node tools/verify-demo.mjs "$ARACHNE_TARGET" artifacts
       - name: Verify public interface
         run: |
           moon info
@@ -43,3 +64,11 @@ jobs:
         run: |
           moon fmt
           git diff --exit-code
+      - name: Preserve observed reports and toolchain
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: arachne-${{ matrix.target }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14

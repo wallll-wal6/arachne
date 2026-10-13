@@ -142,9 +142,12 @@ The corpus is a boundary-focused regression aid, not an exhaustive test of every
 ```sh
 moon update
 moon check --deny-warn
-moon test
-moon build
+moon test --deny-warn
+moon build --deny-warn
 moon info
+moon fmt
+node tools/verify-demo.mjs default artifacts/default
+node tools/verify-demo.mjs js artifacts/js
 ```
 
 The test suite covers adapter normalization, cache reuse behavior, expected outcomes, compile and execution differences, capture/span drift, invalid suite configuration, Unicode boundary fixture construction, and real comparisons between the two bundled backends.
@@ -152,6 +155,11 @@ The test suite covers adapter normalization, cache reuse behavior, expected outc
 It also verifies that a golden span contract catches a supplementary-character
 offset error, so adapters can pin the offset convention before comparing
 backends.
+
+The [engineering acceptance record](docs/acceptance-2026-10-13.md) separates
+local results, environment restrictions, remote CI, publication, and human
+acceptance. CI preserves actual reports for default/JS/native targets; it does
+not update expected files or decide which findings an application may accept.
 
 ## Scope
 

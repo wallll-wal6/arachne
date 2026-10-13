@@ -16,3 +16,22 @@ Review the generated diff, run `moon check --deny-warn` and `moon test`, and kee
 `node tools/verify-demo.mjs` runs the real text and JSON examples against their
 checked-in expected files. See the [migration walkthrough](../examples/demo/README.md)
 for dependencies, target selection, scope, and human review of differences.
+
+Both executables run twice; repeated normalized output must be identical.
+The optional second argument saves actual outputs, stderr, target/Node metadata,
+and a completion marker without shell encoding/redirection issues:
+
+```sh
+node tools/verify-demo.mjs default artifacts/default
+node tools/verify-demo.mjs js artifacts/js
+# Requires a C compiler supported by the installed MoonBit toolchain:
+node tools/verify-demo.mjs native artifacts/native
+```
+
+`demo.json` is the observed envelope, not a copied golden. `verified.json` is
+written only after text/parsed-JSON snapshot and repeatability checks pass;
+a rerun removes the old marker before execution. Files captured on a failed run
+are diagnostics, not acceptance evidence. Use a fresh output directory for a
+new investigation; expected files are never rewritten by this tool. CI records
+the MoonBit toolchain and Git revision beside these outputs and uploads each
+target's directory, including diagnostics available after a failure.

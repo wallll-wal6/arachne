@@ -34,10 +34,17 @@ each containing the existing report v1 object. It distinguishes unmatched
 captures (`null`) from participating empty captures (`""`).
 `node tools/verify-demo.mjs` needs Node.js 22+ and runs both executables, compares
 text after newline normalization, and compares parsed JSON without depending
-on object key order. Any unexpected difference fails the regression with a
+on object key order. Each executable runs twice to check repeatability.
+Any unexpected difference fails the regression with a
 nonzero exit, even though the demo itself displays intentional findings and
 exits normally. The command never rewrites snapshots. To verify another
-execution target, pass `js` or `native` as its final argument.
+execution target, pass `js` or `native` as its first argument.
+
+To save observed reports, pass a target and an output directory, for example
+`node tools/verify-demo.mjs js artifacts/js`. See [tool instructions](../../tools/README.md)
+for diagnostic files and the completion marker. The CI matrix checks default,
+JS, and native targets independently, builds packages, enforces warnings,
+checks generated interfaces/formatting, and uploads actual demo reports.
 
 When dependencies or fixtures change, inspect both engine outcomes and discuss
 any difference with the application owner before editing the expected files.
@@ -103,3 +110,7 @@ Toolchain: `moon 0.1.20260827 (d0aaa07)`, `moonc v0.10.11+6ff76a5f9`,
 Codex generated and checked the result files against the observed outcomes.
 Human acceptance of migration behavior remains pending; CI configuration is
 included, but remote CI has not been run and these commits are not pushed.
+
+This section records the earlier implementation run, not the latest pipeline
+validation. Current commands, observed results, and environment limits are in
+the [engineering acceptance record](../../docs/acceptance-2026-10-13.md).
