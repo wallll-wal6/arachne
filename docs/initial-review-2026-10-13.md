@@ -55,4 +55,12 @@ Codex 辅助：检索文件、阅读源码 / 依赖清单 / 上游公开说明�
 
 实际输出保存在 Git 忽略的 `artifacts/initial-review-1831/default` 与 `js`，含 demo 原始 stdout、重复输出、stderr、运行参数与成功标记；不是复制 expected 文件得到的结果。未重跑 native / 显式 wasm-gc、构建、格式 / 公共接口生成、远端 CI；未发布或验证安装。
 
-本事实记录随唯一文档提交入库，不写自引用哈希。最终 `git add`、`git commit`、`git push` 的命令 / exit code、再次身份核验、文件哈希比较和当前运行时间，记录于自动化 `arachne-18-31` 的 `memory.md`；推送失败不追加凑数提交、不改写原历史。所有能力、材料、团队 / 上游贡献与 AI 披露仍待韦安良复核。
+本事实记录最初随第一文档提交入库，不写自引用哈希。最终 `git add`、`git commit`、`git push` 的命令 / exit code、再次身份核验、文件哈希比较和当前运行时间，记录于自动化 `arachne-18-31` 的 `memory.md`；不追加凑数提交、不改写原历史。所有能力、材料、团队 / 上游贡献与 AI 披露仍待韦安良复核。
+
+## 推送后发现的验证边界与第二项材料成果
+
+第一提交 `1cedfd1d744b76f6ee68b615bc5bc14ef2759d25` 于 18:40:05 生成；提交前重新核验账号、作者 / 提交者和 origin，通过六份文档的显式暂存范围及差异检查。18:40:39 的 `git push origin HEAD:refs/heads/main` 返回 0，正常快进包含六个原有祖先及本次第一提交。再次通过 GitHub API 确认远端 main 等于该哈希；五个原有文件 SHA-256 仍全部未变，暂存为空。
+
+推送自动触发[远端 CI 38384999859](https://github.com/wallll-wal6/arachne/actions/runs/38384999859)。`gh run list --commit ...`、`gh run view 38384999859 --json status,conclusion,jobs,url`、`gh run view 38384999859 --log-failed` 和 jobs API 实际显示：default / JS / native 均在 `Check warnings` 阶段以 exit 255 失败，后续测试、构建与 demo 跳过。共同原因是该次安装的 MoonBit 不再支持依赖目录 `moonbitlang/regexp` 中的 `moon.mod.json`。上文“未远端 CI”是第一提交前的执行范围，现由本节补充为自动触发且失败，不能宣称远端通过。
+
+这项首次远端证据与本地旧工具链通过不同。Codex 因此追加独立的材料修订：README 明确已验证的本地工具链；边界、申报、附表和本记录加入远端失败 / 未验证兼容状态及日志链接。此次第二项成果没有修改 CI、依赖或其清单；不是新增算法或修复验证。不将上游清单迁移当作本项目自有成果。第二次提交 / 推送前仍逐次核验身份、origin、文档链接、差异及原文件哈希，最终结果记入 memory；两项材料及后续兼容性修复均待韦安良复核。

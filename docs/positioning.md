@@ -82,6 +82,13 @@ the current checkout. Both demos matched their checked-in text/JSON snapshots
 and repeated identically. See the [run record](initial-review-2026-10-13.md)
 for exact commands and responsibility disclosure.
 
+After the first documentation push, [remote CI run 38384999859](https://github.com/wallll-wal6/arachne/actions/runs/38384999859)
+failed on default, JS and native before tests: its installed MoonBit no longer
+supports the `moon.mod.json` manifest in `regexp@0.3.5`. The local checks used
+MoonBit `0.1.20260827 (d0aaa07)`; they do not establish compatibility with the
+CI toolchain or other releases. This second material correction records that
+new evidence; it does not migrate an upstream manifest or change CI.
+
 | Real fixture suite | Observed result | Limit of the evidence |
 | --- | --- | --- |
 | `shared-ascii` | Five cases, two backends, zero findings; includes whole-match spans, unmatched optional capture and empty capture | Only the selected ASCII patterns/inputs |

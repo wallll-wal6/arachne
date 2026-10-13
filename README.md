@@ -34,8 +34,12 @@ This is a fixture-based compatibility check, not a proof that two engines are eq
 
 ## Quick start
 
-The reproducible entry point is a source checkout with MoonBit and Node.js
-22+ on PATH. From the repository root:
+The locally verified entry point is a source checkout with MoonBit
+`0.1.20260827 (d0aaa07)` and Node.js 22+ on PATH (this run used Node.js 24.19.0).
+The [2026-10-13 remote CI run](https://github.com/wallll-wal6/arachne/actions/runs/38384999859)
+failed before tests: its installed MoonBit rejected the `moon.mod.json` manifest
+in the public `regexp@0.3.5` dependency. Compatibility with that CI toolchain
+has not been established. From the locally verified environment:
 
 ```sh
 moon update
