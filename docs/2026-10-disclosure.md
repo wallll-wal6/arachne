@@ -1,6 +1,6 @@
 # Arachne 十月申报披露附表
 
-本表是[申报草案](2026-10-hackathon-application-draft.md)的配套说明，待项目负责人韦安良复核；官方字段与正式递交状态尚待确认。
+本表是[申报正文](2026-10-hackathon-application-draft.md)的配套说明，待项目负责人韦安良复核；正式递交状态尚待确认。官方报名表要求一页以内 Markdown，且写明“不要使用 AI 编写”；章程要求“务必人工撰写”。当前正文由 AI 辅助整理，不能据此认定满足人工撰写要求，正式递交前须由负责人亲自撰写最终版本。来源：[十月报名表](https://bxup9uklfcb.feishu.cn/share/base/form/shrcnWUMlgpbwHaXgzV7HmNhNhg)、[赛事章程](https://bxup9uklfcb.feishu.cn/wiki/Dx4Bwd6D1i3GfHkajQCcF7SznEd)。
 
 ## 源码与依赖可核实的项目事实
 

@@ -4,7 +4,7 @@
 本仓库实现契约、适配、比较与报告；正则解析及匹配由公开依赖
 `moonbitlang/regexp@0.3.5` 和 `walkzzz/re-mbt@0.1.0` 提供。
 项目目标与定位由人工明确，AI 辅助检查和修改。
-[十月申报草案](docs/2026-10-hackathon-application-draft.md)与
+[十月申报正文](docs/2026-10-hackathon-application-draft.md)与
 [项目边界](docs/positioning.md)说明实现职责；团队、个人贡献、完整 AI 使用和
 赛期归属等待负责人韦安良复核的事项见[披露附表](docs/2026-10-disclosure.md)。
 
