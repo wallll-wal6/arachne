@@ -1,0 +1,4 @@
+import {
+  "moonbitlang/core/debug",
+  "wallll-wal6/arachne",
+}
