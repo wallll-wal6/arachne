@@ -91,13 +91,6 @@ outcomes as well: matching failures on both sides may yield no comparison
 finding. The owner defines required behavior, permitted differences and the
 final migration decision. The report does not record human approval.
 
-The project goal and positioning were defined by the human owner. AI assists
-with inspection and changes. The [application disclosure](2026-10-disclosure.md)
-records the sole-member team, dependency boundary and September positioning
-issue. The September rejection identified a mismatch between the engine
-application and the behavior-contract testing repository. The final September
-online form and attachment version remain unverified. The
-[September baseline and October changes](2026-10-contribution-scope.md)
-distinguish existing capabilities, new implementation, fixes and documentation
-maintenance; category eligibility and accepted contribution dates remain
-subject to official review.
+For the project’s team, AI assistance and data-provenance notes, see the
+[disclosure](2026-10-disclosure.md). The [October changes](2026-10-contribution-scope.md)
+summarize the existing project scope and current improvements.
