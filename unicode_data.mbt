@@ -4,8 +4,8 @@
 
 ///|
 priv struct UnicodeRange {
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
 }
 
 ///|
@@ -5965,7 +5965,7 @@ pub extend UnicodeCorpusError with @moonbitlang/core/debug.Debug::{to_repr}
 /// This is a test-corpus oracle, not a Unicode classifier used at runtime.
 pub fn unicode_category_cases(
   category~ : String,
-  max_cases~ : Int,
+  max_cases~ : Int32,
 ) -> Result[Array[ContractCase], UnicodeCorpusError] {
   if max_cases < 1 {
     return Err(UnicodeCorpusError::InvalidCaseLimit)
@@ -6020,8 +6020,8 @@ pub fn unicode_category_cases(
 fn append_unicode_case(
   cases : Array[ContractCase],
   category : String,
-  ordinal : Int,
-  codepoint : Int,
+  ordinal : Int32,
+  codepoint : Int32,
   expected_match : Bool,
   pattern : String,
 ) -> Unit {

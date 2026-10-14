@@ -10,7 +10,7 @@
 [项目边界](docs/positioning.md)说明实现职责；依赖、团队与历史定位说明见
 [披露附表](docs/2026-10-disclosure.md)。
 
-项目九月已存在，十月按已有项目维护组织材料；[九月基础与十月增量](docs/2026-10-contribution-scope.md)逐项链接提交，区分新增实现、修复、回归与文档维护，并列出官方类别依据、待确认点及当前 CI 格式检查失败。
+项目九月已存在，十月按已有项目维护组织材料；[九月基础与十月增量](docs/2026-10-contribution-scope.md)逐项链接提交，区分新增实现、修复、回归与文档维护，并列出官方类别依据、待确认点及 CI 格式兼容修订。
 
 Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 
@@ -39,27 +39,35 @@ This is a fixture-based compatibility check, not a proof that two engines are eq
 
 ## Quick start
 
-Run from a source checkout with MoonBit `0.1.20260827 (d0aaa07)` and
+Run from a source checkout with MoonBit `0.1.20261012 (748b63c)` /
+moonc `v0.10.15+943464bfa` and
 Node.js 22+ on PATH:
 
 ```sh
 moon update
+node tools/prepare-dependencies.mjs
+moon fmt --check
 moon check --deny-warn
 moon test --deny-warn
+moon build --deny-warn
 moon run examples/demo-json
 node tools/verify-demo.mjs
 ```
 
 These commands resolve the declared engine versions, run tests, print a JSON
 demo envelope, and compare both real demos with checked-in expectations.
-For MoonBit `0.1.20261012`, insert `node tools/prepare-dependencies.mjs`
-after `moon update` to handle the dependency's legacy manifests. It converts only
+`node tools/prepare-dependencies.mjs` handles the dependency's legacy manifests. It converts only
 the six legacy `regexp@0.3.5` manifests in the downloaded `.mooncakes` cache,
 preserves every engine source file, and records the preparation probe.
 An unrecognized check error fails preparation; always run the strict checks
 afterwards. It does not upgrade dependencies or change the JSON v1 wire contract.
-Manifest preparation does not resolve the source migration required by that
-toolchain's formatter (`Int` to `Int32`); full CI acceptance remains unconfirmed.
+The source uses the formatter's canonical `Int32` spelling. On this toolchain,
+`Int` is an alias for the same signed 32-bit type: public spans, counts and
+case limits keep their types and values, and `moon info` still emits `Int` in
+the generated interface. JSON v1 and the demo snapshots are unchanged.
+See the [MoonBit numeric type documentation](https://docs.moonbitlang.com/zh-cn/latest/language/fundamentals.html#数字).
+MoonBit `0.1.20260827` cannot compile this spelling; upgrade to the baseline
+above to build this revision. Later toolchains require separate verification.
 
 These source-checkout commands do not establish registry publication, an
 installable release or compatibility with every toolchain and execution target.
