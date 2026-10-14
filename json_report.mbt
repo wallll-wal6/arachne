@@ -1,10 +1,10 @@
 ///|
 /// Version 1 of the machine-readable report. Independent of debug enum output.
 pub(all) struct ReportJsonV1 {
-  schema_version : Int
+  schema_version : Int32
   baseline_id : String
-  case_count : Int
-  engine_count : Int
+  case_count : Int32
+  engine_count : Int32
   compatible : Bool
   runs : Array[EngineRunJsonV1]
   findings : Array[FindingJsonV1]
@@ -31,8 +31,8 @@ pub(all) struct EngineOutcomeJsonV1 {
 /// Spans remain zero-based, end-exclusive StringView code-unit offsets.
 pub(all) struct MatchJsonV1 {
   text : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   captures : Array[String?]
 }
 

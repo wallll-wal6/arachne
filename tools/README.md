@@ -7,9 +7,15 @@ To regenerate it, download the versioned Unicode data file and run:
 ```sh
 curl -fsSLo UnicodeData.txt https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt
 node tools/generate_unicode.mjs UnicodeData.txt > unicode_data.mbt
+moon fmt
 ```
 
-Review the generated diff, run `moon check --deny-warn` and `moon test`, and keep the associated data notice in [../UNICODE-LICENSE.txt](../UNICODE-LICENSE.txt). The range ordering and inclusive endpoints are part of the corpus generator's input contract.
+Use the toolchain specified in the [quick start](../README.md#quick-start).
+The generator emits `Int32` range endpoints to match the checked-in table.
+Review the generated diff, run
+`moon fmt --check`, `moon check --deny-warn` and `moon test`, and keep the
+associated data notice in [../UNICODE-LICENSE.txt](../UNICODE-LICENSE.txt).
+The range ordering and inclusive endpoints are part of the corpus generator's input contract.
 
 # Migration demo regression
 

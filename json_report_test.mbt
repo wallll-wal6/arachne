@@ -1,4 +1,60 @@
 ///|
+test "public integer APIs and JSON v1 preserve signed 32-bit boundary values" {
+  let count : Int32 = 2147483647
+  let offset : Int32 = count - 1
+  let contract = @arachne.ContractCase::expect_match_span(
+    id="boundary",
+    pattern="",
+    input="",
+    text="",
+    captures=[],
+    start=offset,
+    end=count,
+  )
+  assert_eq(contract.expected_span, Some((offset, count)))
+  // Serialization accepts caller-constructed observations without executing
+  // an adapter. Large offsets here test numeric encoding, not a real match.
+  let report : @arachne.CompatibilityReport = {
+    baseline_id: "external",
+    case_count: count,
+    engine_count: 1,
+    runs: [
+      {
+        case_id: contract.id,
+        engine_id: "external",
+        outcome: @arachne.EngineOutcome::Completed(
+          Some({ text: "", start: offset, end: count, captures: [], }),
+        ),
+      },
+    ],
+    findings: [],
+  }
+  let actual_count : Int32 = report.case_count()
+  let actual_engines : Int32 = report.engine_count()
+  assert_eq((actual_count, actual_engines), (count, 1))
+  let json = report.json_v1()
+  assert_eq(
+    (json.schema_version, json.case_count, json.engine_count),
+    (1, count, 1),
+  )
+  let observation : @arachne.MatchJsonV1 = {
+    text: "",
+    start: offset,
+    end: count,
+    captures: [None],
+  }
+  assert_eq(
+    ToJson::to_json(observation),
+    @json.parse(
+      (
+        #|{"text":"","start":2147483646,"end":2147483647,"captures":[null]}
+      ),
+    ),
+  )
+  assert_eq(@json.parse(report.format_json()), ToJson::to_json(json))
+}
+
+///|
 test "JSON serialization fixes nested key order and preserves array order" {
   let report : @arachne.CompatibilityReport = {
     baseline_id: "z-baseline",

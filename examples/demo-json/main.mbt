@@ -6,7 +6,7 @@ priv struct DemoSuite {
 
 ///|
 priv struct DemoJson {
-  demo_version : Int
+  demo_version : Int32
   suites : Array[DemoSuite]
 } derive(ToJson)
 

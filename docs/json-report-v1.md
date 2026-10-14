@@ -9,8 +9,14 @@ The 21:32 toolchain compatibility change uses explicit `ToJson` calls and
 five explicit method extensions (also shown in the generated interface).
 It preserves the v1 fields, values, nulls, lexical key order and snapshots;
 there is no schema version increment. The `json` package import is test-only.
-See the [current acceptance record](acceptance-2026-10-13.md) for checked
-toolchains and the remaining formatting limitation.
+Source annotations now use `Int32` for the formatter on MoonBit
+`0.1.20261012` / moonc `v0.10.15+943464bfa`. `Int` remains an alias on that
+toolchain, and the generated public interface still uses `Int`. This spelling
+change preserves signed 32-bit counts, schema version and StringView offsets;
+JSON fields remain numbers with the same values, nulls and ordering. Version 1
+and the checked-in text/JSON snapshots do not change. The older
+`0.1.20260827` compiler does not recognize `Int32`; see the
+[source checkout requirements](../README.md#quick-start).
 
 Consumers must check the integer `schema_version` before interpreting fields.
 Version 1 uses the following field structure; optional values are explicit

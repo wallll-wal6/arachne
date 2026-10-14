@@ -3,8 +3,8 @@
 /// Offsets are zero-based MoonBit StringView code-unit offsets.
 pub(all) struct MatchObservation {
   text : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   captures : Array[String?]
 } derive(Eq, Debug)
 
@@ -29,7 +29,7 @@ pub(all) struct ContractCase {
   pattern : String
   input : String
   expected : ExpectedOutcome?
-  expected_span : (Int, Int)?
+  expected_span : (Int32, Int32)?
 }
 
 ///|
@@ -104,8 +104,8 @@ pub(all) struct EngineRun {
 /// Aggregate result from a compatibility run.
 pub(all) struct CompatibilityReport {
   baseline_id : String
-  case_count : Int
-  engine_count : Int
+  case_count : Int32
+  engine_count : Int32
   runs : Array[EngineRun]
   findings : Array[CompatibilityFinding]
 }
@@ -199,8 +199,8 @@ pub fn ContractCase::expect_match_span(
   input~ : String,
   text~ : String,
   captures~ : Array[String?],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> ContractCase {
   {
     id,
@@ -305,13 +305,13 @@ pub fn CompatibilityReport::is_compatible(self : CompatibilityReport) -> Bool {
 
 ///|
 /// Number of cases evaluated by each configured engine.
-pub fn CompatibilityReport::case_count(self : CompatibilityReport) -> Int {
+pub fn CompatibilityReport::case_count(self : CompatibilityReport) -> Int32 {
   self.case_count
 }
 
 ///|
 /// Number of configured adapters in this run.
-pub fn CompatibilityReport::engine_count(self : CompatibilityReport) -> Int {
+pub fn CompatibilityReport::engine_count(self : CompatibilityReport) -> Int32 {
   self.engine_count
 }
 
