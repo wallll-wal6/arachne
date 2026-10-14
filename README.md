@@ -10,6 +10,8 @@
 [项目边界](docs/positioning.md)说明实现职责；依赖、团队与历史定位说明见
 [披露附表](docs/2026-10-disclosure.md)。
 
+项目九月已存在，十月按已有项目维护组织材料；[九月基础与十月增量](docs/2026-10-contribution-scope.md)逐项链接提交，区分新增实现、修复、回归与文档维护，并列出官方类别依据、待确认点及当前 CI 格式检查失败。
+
 Arachne is a MoonBit library for checking regular-expression behavior contracts across real regex backends. It runs the same pattern/input fixtures through caller-supplied engine adapters, compares compile acceptance, match presence, matched text, spans, and captures, then returns stable findings suitable for tests and CI.
 
 Arachne does not implement a regex syntax, parser, or matching engine. Its first-party adapters call the official [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt) package and the Perl frontend of [`walkzzz/re-mbt`](https://github.com/walkzzz/re-mbt). The re-mbt adapter is deliberately limited to ASCII patterns and inputs because that backend exposes byte-oriented APIs; it refuses non-ASCII data rather than guessing at offset conversion. Applications can add adapters for another engine or a newer engine version without copying either implementation.
