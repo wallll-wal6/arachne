@@ -1,0 +1,5 @@
+import {
+  "wallll-wal6/arachne",
+}
+
+pkgtype(kind: "executable")

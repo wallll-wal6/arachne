@@ -48,9 +48,16 @@ const actualJson = JSON.parse(actualJsonText);
 assert.deepEqual(actualJson, expectedJson, 'JSON demo drifted; review the observations');
 assert.equal(run('examples/demo', 'demo-repeat.txt'), actualText, 'Text demo changed on a repeated run');
 assert.equal(run('examples/demo-json', 'demo-repeat.json'), actualJsonText, 'JSON demo changed on a repeated run');
+const referenceOutput = run('examples/reference-engine', 'reference-engine.txt');
+assert.equal(
+  referenceOutput,
+  'baseline=moonbitlang/regexp cases=2 engines=2 findings=0 compatible=true\n',
+  'Reference engine example drifted; review the shared contracts',
+);
 if (outputDirectory) {
   writeFileSync(resolve(outputDirectory, 'verified.json'), JSON.stringify({
     target, text_snapshot: true, json_snapshot: true, repeat_output: true,
+    reference_engine: true,
   }, null, 2) + '\n');
 }
-console.log(`Migration demo regression passed (${target}): text and JSON match checked-in fixtures and repeat identically.`);
+console.log(`Arachne demos passed (${target}): text and JSON snapshots, repeatability, and reference-engine contracts verified.`);

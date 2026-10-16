@@ -2,7 +2,7 @@
 
 **Arachne 是 MoonBit 正则行为契约与兼容性测试工具。**它将共享的模式、输入和预期结果运行在正则引擎适配器上，比较编译接受、匹配文本、跨度和捕获值，并输出文本或 JSON 报告，帮助开发者检查依赖升级与后端替换的行为变化。
 
-Arachne 实现契约、适配、比较和报告；正则解析与匹配由公开依赖 [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt) 和 [`walkzzz/re-mbt`](https://github.com/walkzzz/re-mbt) 提供。本项目不实现正则引擎，不宣称对所有模式和输入等价。`re-mbt` Perl 适配器只接受 ASCII 模式和输入；有限 Unicode 类别样例仅用于回归。
+Arachne 还包含一个自有的 ASCII 子集参考引擎：递归下降解析器将模式编译为 Thompson NFA，再以去重状态集执行，作为可审查的第三个对照后端。官方 `moonbitlang/regexp` 与 `walkzzz/re-mbt` 仍是独立公开依赖。参考引擎只支持文档列明的语法，不实现捕获值或完整 Unicode，也不替代通用正则库；它与后端的差异会由契约报告呈现。
 
 ## 快速开始
 
@@ -15,17 +15,21 @@ moon check --deny-warn
 moon test --deny-warn
 moon run examples/demo
 moon run examples/demo-json
+moon run examples/reference-engine
 node tools/verify-demo.mjs
 ```
 
-两个示例分别运行文本与 JSON 报告。`node tools/prepare-dependencies.mjs` 只为下载缓存中的旧依赖清单做兼容准备，不改写依赖引擎源码；检查及示例命令用于验证当前检出版本。
+文本与 JSON 示例演示迁移报告；参考引擎示例将其与官方引擎运行同一组契约。`node tools/prepare-dependencies.mjs` 只为下载缓存中的旧依赖清单做兼容准备，不改写依赖引擎源码；检查及示例命令用于验证当前检出版本。
 
 ## 功能
 
 - 编写匹配、非匹配、捕获值和整段跨度契约。
-- 通过适配器比较公开正则后端的实际结果。
+- 用 MoonBit 实现有限 ASCII 正则解析、Thompson NFA 编译和状态集匹配，作为独立参考后端。
+- 通过适配器比较自有参考引擎与公开正则后端的实际结果。
 - 获取稳定文本结果与 JSON v1 报告。
 - 运行迁移夹具、示例和回归检查。
+
+参考引擎支持字面量、`.`、`^` / `$`、字符类与范围、`\d` / `\w` / `\s` 及其反类、分组、`|`、`*` / `+` / `?`。分组只影响优先级，不产出捕获值；匹配采用左侧起点优先、同一起点最长结果。模式上限为 4096 个 ASCII 字符，输入上限为 16384 个 ASCII 字符。回引用、环视、计数重复、其他字母数字转义和非 ASCII 输入会明确拒绝。
 
 查看[迁移示例](examples/demo/README.md)、[JSON v1 格式](docs/json-report-v1.md)、[项目边界](docs/positioning.md)和[十月申报书](docs/十月项目申报书.md)。
 

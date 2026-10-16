@@ -2,9 +2,34 @@
 
 ## Responsibility boundary
 
-Arachne owns fixture validation, adapter coordination, result normalization, baseline comparison, Unicode boundary-case generation, and report formatting. An adapter delegates pattern compilation and matching to the backend engine. Parser and matcher implementations belong to the engine dependencies.
+Arachne owns fixture validation, adapter coordination, result normalization, baseline comparison, Unicode boundary-case generation, report formatting, and a bounded ASCII reference engine. The reference engine provides an independent implementation for small shared contracts; the official and re-mbt adapters continue to call their public dependencies.
 
 `run_contracts` validates that engine IDs and case IDs are non-empty and unique and that the requested baseline exists. It then compiles each distinct pattern once per adapter, executes the relevant cases, checks optional golden expectations, and compares each candidate with the baseline. The resulting rows and findings preserve caller-specified order so CI output stays reproducible.
+
+## First-party reference NFA
+
+`reference_ascii_adapter` parses a documented regular-language subset with a
+recursive-descent parser. Alternation, concatenation, and postfix repetition
+are represented as an AST; Thompson fragment construction patches epsilon
+transitions into a compact NFA. Execution expands epsilon closures into
+deduplicated state sets, so ambiguous paths are merged instead of recursively
+backtracked. Search tries candidate start positions in order and retains the
+longest accepted end for the first matching position.
+
+The supported grammar is intentionally narrow: ASCII literals and escaped
+punctuation, `.`, `^`, `$`, bracket classes with ranges and negation, `\\d`,
+`\\w`, `\\s` and their uppercase complements, structural groups, `|`, `*`,
+`+`, and `?`. Groups do not capture. Backreferences, lookaround, counted
+repetition, unknown alphanumeric escapes, and non-ASCII pattern/input strings
+are rejected. Patterns are capped at 4096 characters and inputs at 16384.
+These bounds keep the reference backend suitable for review fixtures and make
+its narrower semantics explicit; they do not establish performance guarantees
+for the public dependency adapters.
+
+This backend is not assumed to share the official engine's alternative-order,
+capture, or Unicode semantics. Differential fixtures compare only behavior
+that is meaningful for the selected subset. Arachne reports differences
+instead of rewriting patterns to force agreement.
 
 ## Engine adapter contract
 
@@ -16,7 +41,7 @@ An `EngineAdapter` contains a stable ID and a compile function. A successful com
 
 Different engines can have different anchoring, greediness, Unicode, and capture semantics. The adapter must represent what the engine actually did; it must not silently rewrite patterns or normalize away meaningful differences. If a backend cannot provide an offset reliably, the adapter should use a separate contract that does not claim span comparability rather than guess.
 
-The bundled `moonbit_regexp_adapter` calls the official `moonbitlang/regexp` runtime API. The `rembt_ascii_perl_adapter` calls the real `walkzzz/re-mbt` Perl frontend and is intentionally restricted to ASCII patterns and inputs: for ASCII only, the backend's byte offsets equal Arachne's documented string-view code-unit offsets. Non-ASCII values are rejected by this adapter instead of being truncated or misreported. Other backends can be wrapped by constructing `EngineAdapter` and `CompiledMatcher` values. Arachne itself does not parse or execute regex syntax.
+The bundled `moonbit_regexp_adapter` calls the official `moonbitlang/regexp` runtime API. The `rembt_ascii_perl_adapter` calls the real `walkzzz/re-mbt` Perl frontend and is intentionally restricted to ASCII patterns and inputs: for ASCII only, the backend's byte offsets equal Arachne's documented string-view code-unit offsets. Non-ASCII values are rejected by this adapter instead of being truncated or misreported. Other backends can be wrapped by constructing `EngineAdapter` and `CompiledMatcher` values.
 
 ## Findings
 
@@ -42,4 +67,4 @@ The corpus is an oracle for constructing regression inputs, not a matching imple
 
 ## Limits
 
-Arachne does not provide a timeout, cancellation mechanism, parser budget, or execution sandbox. Adapter functions run synchronously. A backtracking engine may spend substantial time on a pathological case before Arachne can produce a report. Keep fixtures bounded and select a backend appropriate to the input trust model.
+Arachne does not provide a timeout, cancellation mechanism, or execution sandbox. Adapter functions run synchronously. The reference NFA merges ambiguous paths into state sets, while unanchored search tries candidate start positions in order; its runtime can therefore grow quadratically with input length for some patterns. Pattern and input limits bound that backend's accepted workload. These controls are not guarantees for the public dependency adapters. Keep fixtures bounded and select a backend appropriate to the input trust model.

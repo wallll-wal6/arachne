@@ -3,8 +3,9 @@
 **Arachne is a MoonBit regex behavior-contract / compatibility-testing tool.**
 It runs shared pattern/input fixtures through backend adapters, checks optional
 golden expectations, compares a selected baseline with candidates, and emits
-text and JSON findings. Pattern parsing and matching are supplied by public
-engine dependencies.
+text and JSON findings. It also contains a bounded first-party ASCII reference
+parser and Thompson NFA backend; two additional backends come from public
+dependencies.
 
 ## Repository and dependency responsibilities
 
@@ -12,6 +13,7 @@ engine dependencies.
 | --- | --- |
 | `contract.mbt` | Contract cases, expectations, configuration validation, per-adapter compile reuse, baseline comparison, text findings and the official backend adapter |
 | `rembt_adapter.mbt` | ASCII domain guards, calls to `@rembt.Perl::compile_pat` / `exec_opt`, and normalization of `GroupT` text and offsets |
+| `reference_engine.mbt` | ASCII-subset recursive-descent parser, Thompson NFA construction, epsilon-closure state-set execution, and explicit resource/syntax boundaries |
 | `json_report.mbt` | JSON v1 report projection and serialization |
 | `unicode_data.mbt` | Category ranges labelled Unicode 17.0 and bounded boundary-fixture construction; no regex parsing or matching |
 | `tools/generate_unicode.mjs` | Read `UnicodeData.txt` and generate category range tables |
@@ -76,9 +78,12 @@ complete syntax support or cross-engine Unicode compatibility.
 ## Scope and ownership of decisions
 
 Arachne invokes adapters synchronously, without execution timeouts or a
-sandbox. Compile reuse is an implementation behavior, not a benchmark or a
-performance guarantee. No engine algorithm or performance claim is made for
-Arachne.
+sandbox. The reference NFA merges ambiguous paths into state sets, while
+unanchored search currently tries candidate start positions in order; runtime
+can therefore grow quadratically with input length for some patterns. Pattern
+and input limits bound that backend's accepted workload. Compile reuse is an
+implementation behavior, not a benchmark or a performance guarantee. No
+performance claim is made for the public dependency adapters.
 
 The range table is labelled Unicode 17.0. The generator reads an externally
 supplied `UnicodeData.txt` and emits that label; confirming the original input
