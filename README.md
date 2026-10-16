@@ -41,7 +41,7 @@ node tools/verify-demo.mjs
 
 ## 验证与贡献边界
 
-主分支 [CI](https://github.com/wallll-wal6/arachne/actions/runs/38509773560) 在 default、JS、native 目标通过检查、测试、构建和示例。正则行为报告针对有限夹具，不提供超时、沙箱或性能保证；Unicode 类别数据的来源限制见[第三方说明](THIRD_PARTY_NOTICES.md)及[项目边界](docs/positioning.md)。
+主分支 [CI](https://github.com/wallll-wal6/arachne/actions/runs/38901908016) 在 default、JS、native 目标通过检查、测试、构建和示例。正则行为报告针对有限夹具，不提供超时、沙箱或性能保证；Unicode 类别数据的来源限制见[第三方说明](THIRD_PARTY_NOTICES.md)及[项目边界](docs/positioning.md)。
 
 项目由韦安良一人维护。AI（Codex）辅助部分代码与测试编写、排查和文档整理；项目范围与最终取舍由负责人负责。公开依赖维护者不是本项目成员，项目不申报上游贡献。AI 辅助披露和数据限制见[申报书](docs/十月项目申报书.md)。
 
