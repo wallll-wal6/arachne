@@ -62,8 +62,8 @@ the registry archive; the package version and parser/matcher sources do not.
 acceptance passed. A retry first removes its old receipt. Run the strict
 check/test/build and demo verifier next. CI uses the same commands and saves
 their logs with the toolchain and revision; Bash pipefail preserves failures.
-Its current version guard rejects drift from moon `0.1.20261012` / moonc
-`v0.10.15+943464bfa`. The official installer and Node.js 22 patch version still
-come from moving downloads, so this is a drift guard, not an archived toolchain.
-The installer script is retained in CI artifacts for diagnosis. Future versions
-need explicit verification before changing the guard.
+CI records the installed MoonBit toolchain and checks that `moonc` is at least
+`0.10.14`, matching the event's acceptance requirement. The official installer
+and Node.js 22 patch version come from moving downloads, so every CI run also
+checks the current toolchain against the project. The installer script and
+version output are retained in CI artifacts for diagnosis.

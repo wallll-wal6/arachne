@@ -39,9 +39,17 @@ jobs:
           moon version --all | tee artifacts/toolchain.txt
           node --version | tee -a artifacts/toolchain.txt
           git rev-parse HEAD | tee artifacts/revision.txt
-          # Fail on toolchain drift: dated archives currently return HTTP 403.
-          grep -F 'moon 0.1.20261012 (748b63c' artifacts/toolchain.txt
-          grep -F 'moonc v0.10.15+943464bfa' artifacts/toolchain.txt
+          moonc_version="$(sed -nE 's/^moonc v([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' artifacts/toolchain.txt)"
+          if [[ -z "$moonc_version" ]]; then
+            echo 'Could not determine the MoonBit compiler version.' >&2
+            exit 1
+          fi
+          minimum_version='0.10.14'
+          earliest_version="$(printf '%s\n%s\n' "$minimum_version" "$moonc_version" | sort -V | head -n 1)"
+          if [[ "$earliest_version" != "$minimum_version" ]]; then
+            echo "moonc $moonc_version is below the required $minimum_version." >&2
+            exit 1
+          fi
       - name: Resolve pinned module dependencies
         run: moon update 2>&1 | tee artifacts/update.log
       - name: Prepare legacy dependency manifests without changing engine sources

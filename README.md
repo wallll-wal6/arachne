@@ -6,7 +6,7 @@ Arachne 还包含一个自有的 ASCII 子集参考引擎：递归下降解析�
 
 ## 快速开始
 
-需要 MoonBit `0.1.20261012` 和 Node.js 22 或更新版本：
+需要 MoonBit（`moonc` 0.10.14 或更新版本）和 Node.js 22 或更新版本：
 
 ```sh
 moon update
