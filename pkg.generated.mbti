@@ -14,7 +14,7 @@ pub fn rembt_ascii_perl_adapter() -> EngineAdapter
 
 pub fn run_contracts(Array[ContractCase], Array[EngineAdapter], String) -> Result[CompatibilityReport, ContractError]
 
-pub fn unicode_category_cases(category~ : String, max_cases~ : Int) -> Result[Array[ContractCase], UnicodeCorpusError]
+pub fn unicode_category_cases(category~ : String, max_cases~ : Int32) -> Result[Array[ContractCase], UnicodeCorpusError]
 
 // Errors
 
@@ -28,13 +28,13 @@ pub(all) struct CompatibilityFinding {
 
 pub(all) struct CompatibilityReport {
   baseline_id : String
-  case_count : Int
-  engine_count : Int
+  case_count : Int32
+  engine_count : Int32
   runs : Array[EngineRun]
   findings : Array[CompatibilityFinding]
 }
-pub fn CompatibilityReport::case_count(Self) -> Int
-pub fn CompatibilityReport::engine_count(Self) -> Int
+pub fn CompatibilityReport::case_count(Self) -> Int32
+pub fn CompatibilityReport::engine_count(Self) -> Int32
 pub fn CompatibilityReport::format_findings(Self) -> String
 pub fn CompatibilityReport::format_json(Self) -> String
 pub fn CompatibilityReport::is_compatible(Self) -> Bool
@@ -51,10 +51,10 @@ pub(all) struct ContractCase {
   pattern : String
   input : String
   expected : ExpectedOutcome?
-  expected_span : (Int, Int)?
+  expected_span : (Int32, Int32)?
 }
 pub fn ContractCase::expect_match(id~ : String, pattern~ : String, input~ : String, text~ : String, captures~ : Array[String?]) -> Self
-pub fn ContractCase::expect_match_span(id~ : String, pattern~ : String, input~ : String, text~ : String, captures~ : Array[String?], start~ : Int, end~ : Int) -> Self
+pub fn ContractCase::expect_match_span(id~ : String, pattern~ : String, input~ : String, text~ : String, captures~ : Array[String?], start~ : Int32, end~ : Int32) -> Self
 pub fn ContractCase::expect_no_match(id~ : String, pattern~ : String, input~ : String) -> Self
 pub fn ContractCase::new(id~ : String, pattern~ : String, input~ : String) -> Self
 
@@ -142,8 +142,8 @@ pub fn FindingKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MatchJsonV1 {
   text : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   captures : Array[String?]
 }
 pub fn MatchJsonV1::to_json(Self) -> Json
@@ -151,8 +151,8 @@ pub impl ToJson for MatchJsonV1
 
 pub(all) struct MatchObservation {
   text : String
-  start : Int
-  end : Int
+  start : Int32
+  end : Int32
   captures : Array[String?]
 } derive(Eq, @debug.Debug)
 pub fn MatchObservation::equal(Self, Self) -> Bool
@@ -160,10 +160,10 @@ pub fn MatchObservation::not_equal(Self, Self) -> Bool
 pub fn MatchObservation::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ReportJsonV1 {
-  schema_version : Int
+  schema_version : Int32
   baseline_id : String
-  case_count : Int
-  engine_count : Int
+  case_count : Int32
+  engine_count : Int32
   compatible : Bool
   runs : Array[EngineRunJsonV1]
   findings : Array[FindingJsonV1]
