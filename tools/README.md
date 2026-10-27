@@ -1,20 +1,25 @@
 # Unicode corpus data
 
-The compatibility corpus uses inclusive Unicode General_Category ranges labelled Unicode 17.0. The generator reads an external `UnicodeData.txt` and writes that version label; confirming the original input version requires its provenance record, listed in the [disclosure](../docs/2026-10-disclosure.md). The generated file is test-oracle data; it is not used to classify input or execute regular expressions.
+The compatibility corpus uses inclusive Unicode General_Category ranges from Unicode 17.0.0. I downloaded the versioned file from the official Unicode archive and verified that the generated section in `unicode_data.mbt` matches the generator output line-for-line. The input file's SHA-256 is `2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c`; the source and license are also recorded in [third-party notices](../THIRD_PARTY_NOTICES.md). The generated file is test-oracle data; it is not used to classify input or execute regular expressions.
 
 To regenerate it, download the versioned Unicode data file and run:
 
 ```sh
 curl -fsSLo UnicodeData.txt https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt
-node tools/generate_unicode.mjs UnicodeData.txt > unicode_data.mbt
-moon fmt
+node tools/generate_unicode.mjs UnicodeData.txt > UnicodeData.generated.mbt
 ```
+
+The generator emits the generated section only. `unicode_data.mbt` also has
+hand-maintained fixture helpers after that section, so do not redirect directly
+to `unicode_data.mbt`. Replace only its generated section, from the generated
+file header through the `unicode_category_ranges` function, and retain the
+helper code beginning at `UnicodeCorpusError`. Remove the scratch file before
+running `moon fmt`, `moon fmt --check`, `moon check --deny-warn` and `moon test`.
 
 Use the toolchain specified in the [quick start](../README.md#quick-start).
 The generator emits `Int32` range endpoints to match the checked-in table.
-Review the generated diff, run
-`moon fmt --check`, `moon check --deny-warn` and `moon test`, and keep the
-associated data notice in [../UNICODE-LICENSE.txt](../UNICODE-LICENSE.txt).
+Review the generated diff and keep the associated data notice in
+[../UNICODE-LICENSE.txt](../UNICODE-LICENSE.txt).
 The range ordering and inclusive endpoints are part of the corpus generator's input contract.
 
 # Migration demo regression

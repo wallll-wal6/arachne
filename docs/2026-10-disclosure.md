@@ -6,4 +6,4 @@ Arachne 由韦安良一人负责和维护；`moonbitlang/regexp` 与 `walkzzz/re
 
 项目负责人对目标范围、功能取舍和最终提交负责。AI（Codex）曾辅助部分代码与测试编写、问题排查、依赖和工具链检查以及文档整理。AI 生成或修改的内容纳入代码审查范围；自动化检查只能说明相应命令通过，不能替代人工判断。负责人将在提交申报前复核代码变更、示例结果、申报事实和 AI 辅助范围。
 
-Unicode 类别表标注为 Unicode 17.0，但生成器使用外部 `UnicodeData.txt`，现有项目记录不足以独立确认原始输入的来源与版本。在补齐来源前，该数据只支撑有限回归夹具，不用于证明完整覆盖或跨引擎一致性。
+Unicode 类别表使用官方 Unicode 17.0.0 `UnicodeData.txt`。我从 [Unicode 17.0.0 UCD 归档](https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt)重新生成并核对了仓库中的生成段，逐行一致；该输入文件的 SHA-256 为 `2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c`。许可与重建步骤见[第三方说明](../THIRD_PARTY_NOTICES.md)和[生成说明](../tools/README.md)。这些数据仅用于有限回归夹具，不代表完整 Unicode 覆盖或跨引擎一致性。

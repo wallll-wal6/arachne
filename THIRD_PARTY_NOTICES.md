@@ -31,11 +31,14 @@ for the complete terms. Arachne's own source remains under the license in
 
 ## Unicode category data
 
-`unicode_data.mbt` contains a range table labelled Unicode 17.0, used to
-construct bounded regression fixtures. The generator reads an externally
-supplied `UnicodeData.txt`; the original input version lacks an independent
-provenance record, as stated in the [disclosure](docs/2026-10-disclosure.md).
-The table is not
-an Arachne regex engine implementation. Its separate notice is in
+`unicode_data.mbt` contains a range table generated from the official Unicode
+17.0.0 [`UnicodeData.txt`](https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt).
+The downloaded source has SHA-256
+`2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c`; its
+generated section was reproduced and matched against the checked-in table.
+Unicode data files are generally distributed under Unicode License v3; the
+applicable notice is included in [`UNICODE-LICENSE.txt`](UNICODE-LICENSE.txt).
+The table is used only to construct bounded regression fixtures, not as an
+Arachne regex engine implementation. The license text is in
 [`UNICODE-LICENSE.txt`](UNICODE-LICENSE.txt), and regeneration is documented in
 [`tools/README.md`](tools/README.md).

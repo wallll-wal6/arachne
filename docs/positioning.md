@@ -85,9 +85,9 @@ and input limits bound that backend's accepted workload. Compile reuse is an
 implementation behavior, not a benchmark or a performance guarantee. No
 performance claim is made for the public dependency adapters.
 
-The range table is labelled Unicode 17.0. The generator reads an externally
-supplied `UnicodeData.txt` and emits that label; confirming the original input
-version requires its provenance record. The bounded corpus constructs
+The generated range section was reproduced from the official Unicode 17.0.0
+`UnicodeData.txt`; its source URL and SHA-256 are recorded in the
+[third-party notice](../THIRD_PARTY_NOTICES.md). The bounded corpus constructs
 regression inputs; it is not a matching implementation or proof of complete
 Unicode coverage.
 
