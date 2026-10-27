@@ -81,6 +81,143 @@ test "reference NFA returns leftmost-longest and empty matches" {
 }
 
 ///|
+test "reference NFA terminates epsilon cycles and handles empty alternatives" {
+  let report = @arachne.run_contracts(
+    [
+      @arachne.ContractCase::expect_match(
+        id="empty-cycle-after-repetition",
+        pattern="^(a?)*$",
+        input="aaa",
+        text="aaa",
+        captures=[],
+      ),
+      @arachne.ContractCase::expect_match_span(
+        id="empty-cycle-on-empty-input",
+        pattern="^(a?)*$",
+        input="",
+        text="",
+        captures=[],
+        start=0,
+        end=0,
+      ),
+      @arachne.ContractCase::expect_match(
+        id="empty-left-alternative",
+        pattern="|a",
+        input="a",
+        text="a",
+        captures=[],
+      ),
+      @arachne.ContractCase::expect_match(
+        id="empty-right-alternative",
+        pattern="a|",
+        input="a",
+        text="a",
+        captures=[],
+      ),
+    ],
+    [@arachne.reference_ascii_adapter()],
+    "arachne/reference-nfa (ASCII)",
+  ).unwrap()
+  assert_true(report.is_compatible())
+}
+
+///|
+test "reference NFA bounds pattern input and recursive group depth" {
+  let engine = @arachne.reference_ascii_adapter()
+  match (engine.compile)(String::make(4096, 'a')) {
+    Err(message) =>
+      abort("a pattern at the documented limit was rejected: " + message)
+    Ok(_) => ()
+  }
+  match (engine.compile)(String::make(4097, 'a')) {
+    Err(message) => assert_true(message.contains("4096"))
+    Ok(_) => abort("a pattern beyond the documented limit must be rejected")
+  }
+
+  let accepted_depth = 64
+  let accepted_pattern = String::make(accepted_depth, '(') +
+    "a" +
+    String::make(accepted_depth, ')')
+  match (engine.compile)(accepted_pattern) {
+    Err(message) =>
+      abort("a group at the documented limit was rejected: " + message)
+    Ok(matcher) =>
+      match (matcher.observe)("a") {
+        Ok(Some(observation)) => assert_eq(observation.text, "a")
+        _ => abort("a nested structural group should preserve the match")
+      }
+  }
+  let rejected_depth = accepted_depth + 1
+  let rejected_pattern = String::make(rejected_depth, '(') +
+    "a" +
+    String::make(rejected_depth, ')')
+  match (engine.compile)(rejected_pattern) {
+    Err(message) => assert_true(message.contains("64"))
+    Ok(_) => abort("excessive group nesting must be rejected before recursion")
+  }
+
+  let matcher = match (engine.compile)("^a*$") {
+    Err(message) => abort(message)
+    Ok(matcher) => matcher
+  }
+  let maximum_input = String::make(16384, 'a')
+  match (matcher.observe)(maximum_input) {
+    Ok(Some(observation)) => {
+      assert_eq(observation.text, maximum_input)
+      assert_eq(observation.start, 0)
+      assert_eq(observation.end, 16384)
+    }
+    _ => abort("an input at the documented limit should be evaluated")
+  }
+  match (matcher.observe)(String::make(16385, 'a')) {
+    Err(message) => assert_true(message.contains("16384"))
+    _ => abort("an input beyond the documented limit must be rejected")
+  }
+}
+
+///|
+test "reference NFA covers complement predicates and line terminators" {
+  let report = @arachne.run_contracts(
+    [
+      @arachne.ContractCase::expect_match(
+        id="non-digit-complement",
+        pattern="\\D+",
+        input="42!ab7",
+        text="!ab",
+        captures=[],
+      ),
+      @arachne.ContractCase::expect_match(
+        id="word-complement",
+        pattern="\\W+",
+        input="word -- done",
+        text=" -- ",
+        captures=[],
+      ),
+      @arachne.ContractCase::expect_match(
+        id="whitespace-range",
+        pattern="\\s+",
+        input="x \t\ry",
+        text=" \t\r",
+        captures=[],
+      ),
+      @arachne.ContractCase::expect_no_match(
+        id="dot-excludes-line-feed",
+        pattern=".",
+        input="\n",
+      ),
+      @arachne.ContractCase::expect_no_match(
+        id="dot-excludes-carriage-return",
+        pattern=".",
+        input="\r",
+      ),
+    ],
+    [@arachne.reference_ascii_adapter()],
+    "arachne/reference-nfa (ASCII)",
+  ).unwrap()
+  assert_true(report.is_compatible())
+}
+
+///|
 test "reference NFA rejects unsupported syntax instead of misreading it" {
   let engine = @arachne.reference_ascii_adapter()
   let invalid_patterns = ["(", "[a-", "a**", "(?=a)", "\\1", "\\p{L}"]

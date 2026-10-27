@@ -11,7 +11,7 @@ pub fn reference_ascii_adapter() -> EngineAdapter {
     if chars.length() > 4096 {
       return Err("reference-limit: pattern exceeds 4096 characters")
     }
-    let parser : ReferenceParser = { chars, index: 0, }
+    let parser : ReferenceParser = { chars, index: 0, group_depth: 0, }
     let ast = match reference_parse_expression(parser) {
       Err(message) => return Err(message)
       Ok(node) => node
@@ -80,6 +80,7 @@ priv enum ReferenceNode {
 priv struct ReferenceParser {
   chars : Array[Char]
   mut index : Int32
+  mut group_depth : Int32
 }
 
 ///|
@@ -194,7 +195,13 @@ fn reference_parse_atom(
       if reference_peek(parser) == Some('?') {
         return Err("syntax: lookaround and special groups are unsupported")
       }
-      let inside = match reference_parse_expression(parser) {
+      if parser.group_depth >= 64 {
+        return Err("reference-limit: group nesting exceeds 64 levels")
+      }
+      parser.group_depth = parser.group_depth + 1
+      let parsed = reference_parse_expression(parser)
+      parser.group_depth = parser.group_depth - 1
+      let inside = match parsed {
         Err(message) => return Err(message)
         Ok(node) => node
       }

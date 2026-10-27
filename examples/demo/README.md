@@ -120,8 +120,8 @@ do not expose separate numeric capture-group spans.
 The Unicode suite only exercises the official adapter. Its four explicit
 fixtures (BMP literal, supplementary prefix, supplementary literal, and Greek
 uppercase category search) and first four `Lu` boundary samples are a small regression
-sample from the range table labelled Unicode 17.0. Its original input version
-requires the provenance confirmation listed in the [disclosure](../../docs/2026-10-disclosure.md). The generated four samples happen
+sample from the range table generated from Unicode 17.0.0 data, with source
+and checksum recorded in the [disclosure](../../docs/2026-10-disclosure.md). The generated four samples happen
 to be ASCII; they do not cover all categories, scripts, or supplementary
 scalars, prove engine equivalence, or compare re-mbt Unicode matching.
 
