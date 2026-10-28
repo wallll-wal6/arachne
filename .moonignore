@@ -1,0 +1,7 @@
+target/
+.moon/
+_build/
+/UnicodeData.txt
+/artifacts/
+/docs/2026-10-hackathon-application.md
+/trace.json
