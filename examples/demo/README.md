@@ -1,19 +1,22 @@
 # Reproducible backend migration example
 
-From the repository root, with the locally verified MoonBit
-`0.1.20260827 (d0aaa07)` and Node.js 22+ on PATH:
+From the repository root, use MoonBit with `moonc` 0.10.14 or newer and
+Node.js 22 or newer, as required in the [quick start](../../README.md#快速开始):
 
 ```sh
 moon update
+node tools/prepare-dependencies.mjs
 moon check --deny-warn
 moon test --deny-warn
+moon build --deny-warn
 moon run examples/demo
 moon run examples/demo-json
 node tools/verify-demo.mjs
 ```
 
-For MoonBit `0.1.20261012`, insert `node tools/prepare-dependencies.mjs`
-after `moon update` to convert the legacy dependency manifests. See the
+The dependency preparation command checks the downloaded legacy manifests
+and changes only those manifests when the current toolchain requires it; it
+does not rewrite dependency engine source. See the
 [tool instructions](../../tools/README.md). A successful preparation does not
 replace the checks above or establish compatibility with every toolchain.
 
