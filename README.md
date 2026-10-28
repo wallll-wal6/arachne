@@ -10,7 +10,6 @@ Arachne 还包含一个自有的 ASCII 子集参考引擎：递归下降解析�
 
 ```sh
 moon update
-node tools/prepare-dependencies.mjs
 moon check --deny-warn
 moon test --deny-warn
 moon build --deny-warn
@@ -20,7 +19,7 @@ moon run examples/reference-engine
 node tools/verify-demo.mjs
 ```
 
-文本与 JSON 示例演示迁移报告；参考引擎示例将其与官方引擎运行同一组契约。`node tools/prepare-dependencies.mjs` 只为下载缓存中的旧依赖清单做兼容准备，不改写依赖引擎源码；检查及示例命令用于验证当前检出版本。
+文本与 JSON 示例演示迁移报告；参考引擎示例将其与官方引擎运行同一组契约。`moon update` 获取 `moon.mod` 中固定版本的依赖；检查及示例命令用于验证当前检出版本。
 
 ## 功能
 
@@ -42,7 +41,7 @@ node tools/verify-demo.mjs
 
 ## 验证与贡献边界
 
-[GitHub Actions CI](https://github.com/wallll-wal6/arachne/actions/workflows/ci.yml) 在 default、JS、native 目标执行检查、测试、构建和示例验证，并记录工具链版本及运行报告。正则行为报告针对有限夹具，不提供超时、沙箱或性能保证；Unicode 类别数据的来源和限制见[第三方说明](THIRD_PARTY_NOTICES.md)及[项目边界](docs/positioning.md)。
+[GitHub Actions CI](https://github.com/wallll-wal6/arachne/actions/workflows/ci.yml) 在 default、JS、native 目标执行检查、测试、构建和示例验证；default 目标还会运行 Mooncakes 发布包 dry-run 校验，但不会发布。CI 同时记录工具链版本及运行报告。正则行为报告针对有限夹具，不提供超时、沙箱或性能保证；Unicode 类别数据的来源和限制见[第三方说明](THIRD_PARTY_NOTICES.md)及[项目边界](docs/positioning.md)。
 
 项目由韦安良一人维护。AI（Codex）辅助部分代码与测试编写、排查和文档整理；项目范围与最终取舍由负责人负责。公开依赖维护者不是本项目成员，项目不申报上游贡献。AI 辅助披露和数据限制见[申报书](docs/十月项目申报书.md)。
 

@@ -18,7 +18,7 @@ dependencies.
 | `unicode_data.mbt` | Category ranges labelled Unicode 17.0 and bounded boundary-fixture construction; no regex parsing or matching |
 | `tools/generate_unicode.mjs` | Read `UnicodeData.txt` and generate category range tables |
 | Tests, `examples/migration-fixtures`, `tools/verify-demo.mjs` | Contract regressions, shared fixtures, text/JSON snapshot and repeat-output checks |
-| `moonbitlang/regexp@0.3.5` | Direct dependency in `moon.mod`, imported in `moon.pkg`; the official adapter calls its `compile` / `execute` APIs; the dependency supplies its parser and matcher |
+| `moonbitlang/regexp@0.3.6` | Direct dependency in `moon.mod`, imported in `moon.pkg`; the official adapter calls its `compile` / `execute` APIs; the dependency supplies its parser and matcher |
 | `walkzzz/re-mbt@0.1.0` | Direct dependency in `moon.mod`; `walkzzz/re-mbt/re` is imported as `@rembt`; the dependency supplies its parser and matcher; Arachne calls only its Perl frontend |
 
 The downloaded re-mbt manifest also declares `moonbitlang/x@0.4.48` as a

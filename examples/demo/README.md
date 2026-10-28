@@ -5,7 +5,6 @@ Node.js 22 or newer, as required in the [quick start](../../README.md#快速开�
 
 ```sh
 moon update
-node tools/prepare-dependencies.mjs
 moon check --deny-warn
 moon test --deny-warn
 moon build --deny-warn
@@ -14,13 +13,7 @@ moon run examples/demo-json
 node tools/verify-demo.mjs
 ```
 
-The dependency preparation command checks the downloaded legacy manifests
-and changes only those manifests when the current toolchain requires it; it
-does not rewrite dependency engine source. See the
-[tool instructions](../../tools/README.md). A successful preparation does not
-replace the checks above or establish compatibility with every toolchain.
-
-`moon.mod` pins `moonbitlang/regexp@0.3.5` and `walkzzz/re-mbt@0.1.0`.
+`moon.mod` pins `moonbitlang/regexp@0.3.6` and `walkzzz/re-mbt@0.1.0`.
 `../migration-fixtures/fixtures.mbt` supplies every case to the existing
 `run_contracts`, adapters, Unicode generator, and report formatters. No mock
 engine, parser, matcher, or alternative comparison policy is introduced.

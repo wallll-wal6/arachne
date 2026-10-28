@@ -152,7 +152,7 @@ pub fn run_demo() -> Array[(String, @arachne.CompatibilityReport)] {
 pub fn format_text(
   suites : Array[(String, @arachne.CompatibilityReport)],
 ) -> String {
-  let mut output = "Arachne migration demo: regexp@0.3.5 -> re-mbt@0.1.0 Perl (ASCII)"
+  let mut output = "Arachne migration demo: regexp@0.3.6 -> re-mbt@0.1.0 Perl (ASCII)"
   for suite in suites {
     let (name, report) = suite
     output += "\n[\{name}]\n\{report.summary()}"

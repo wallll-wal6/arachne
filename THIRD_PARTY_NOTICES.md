@@ -15,7 +15,7 @@ are recorded in `moon.mod`; package imports are recorded in `moon.pkg`.
 
 The bundled `moonbit_regexp_adapter` in `contract.mbt` calls
 [`moonbitlang/regexp`](https://github.com/moonbitlang/regexp.mbt), version
-`0.3.5`, as a MoonBit dependency. Pattern parsing and matching are provided by
+`0.3.6`, as a MoonBit dependency. Pattern parsing and matching are provided by
 that package. No regexp engine source is copied into this repository; its
 license and notices belong to the separately distributed upstream package.
 

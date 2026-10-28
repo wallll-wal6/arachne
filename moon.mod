@@ -13,6 +13,6 @@ keywords = [ "regex", "compatibility", "testing", "unicode" ]
 description = "Behavior contract testing across MoonBit regex backends with Unicode boundary fixtures."
 
 import {
-  "moonbitlang/regexp@0.3.5",
+  "moonbitlang/regexp@0.3.6",
   "walkzzz/re-mbt@0.1.0",
 }

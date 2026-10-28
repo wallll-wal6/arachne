@@ -52,8 +52,6 @@ jobs:
           fi
       - name: Resolve pinned module dependencies
         run: moon update 2>&1 | tee artifacts/update.log
-      - name: Prepare legacy dependency manifests without changing engine sources
-        run: node tools/prepare-dependencies.mjs artifacts/dependency-preparation
       - name: Check warnings
         run: |
           target_args=()
@@ -71,6 +69,9 @@ jobs:
           moon build "${target_args[@]}" --deny-warn 2>&1 | tee artifacts/build.log
       - name: Verify migration text, JSON, and repeatability
         run: node tools/verify-demo.mjs "$ARACHNE_TARGET" artifacts 2>&1 | tee artifacts/demo-check.log
+      - name: Validate Mooncakes package without publishing
+        if: matrix.target == 'default'
+        run: moon publish --dry-run 2>&1 | tee artifacts/publish-check.log
       - name: Verify public interface
         run: |
           moon info 2>&1 | tee artifacts/info.log
